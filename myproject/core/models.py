@@ -9,7 +9,11 @@ class User(AbstractUser):
         ('worker', 'Worker'),
     )
 
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES)
+    role = models.CharField(
+    max_length=20,
+    choices=ROLE_CHOICES,
+    default="customer",
+)
     phone = models.CharField(max_length=15, unique=True)
 
 
