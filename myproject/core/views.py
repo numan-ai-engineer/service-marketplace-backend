@@ -34,6 +34,20 @@ class WorkerProfileViewSet(viewsets.ModelViewSet):
     queryset = WorkerProfile.objects.all()
     serializer_class = WorkerProfileSerializer
 
+    def get_queryset(self):
+        queryset = WorkerProfile.objects.all()
+
+        city = self.request.query_params.get('city')
+        service = self.request.query_params.get('service')
+
+        if city:
+            queryset = queryset.filter(city__icontains=city)
+
+        if service:
+            queryset = queryset.filter(services__name__icontains=service)
+
+        return queryset
+
 
 # =========================
 # BOOKING API
