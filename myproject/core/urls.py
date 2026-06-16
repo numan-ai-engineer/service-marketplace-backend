@@ -1,4 +1,5 @@
 from django.urls import path, include
+from .views import update_booking_status
 from rest_framework.routers import DefaultRouter
 from .views import (
     UserViewSet,
@@ -18,6 +19,7 @@ router.register(r'bookings', BookingViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),
+    path("bookings/<int:pk>/status/", update_booking_status),
     path('register/', register_user),
 
     # 🔒 PROTECTED API

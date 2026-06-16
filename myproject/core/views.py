@@ -68,3 +68,35 @@ def test_protected(request):
         "user": request.user.username,
         "role": request.user.role
     })
+
+@api_view(["PATCH"])
+@permission_classes([IsAuthenticated])
+def update_booking_status(request, pk):
+    try:
+        booking = Booking.objects.get(pk=pk)
+
+        # only assigned worker can update
+        if booking.worker != request.user:
+            return Response(
+                {"error": "You are not allowed to update this booking"},
+                status=403
+            )
+
+        new_status = request.data.get("status")
+
+        if new_status not in ["accepted", "rejected", "completed"]:
+            return Response(
+                {"error": "Invalid status"},
+                status=400
+            )
+
+        booking.status = new_status
+        booking.save()
+
+        return Response({
+            "message": "Booking updated successfully",
+            "status": booking.status
+        })
+
+    except Booking.DoesNotExist:
+        return Response({"error": "Booking not found"}, status=404)
