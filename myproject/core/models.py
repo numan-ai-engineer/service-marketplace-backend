@@ -34,6 +34,8 @@ class WorkerProfile(models.Model):
     experience_years = models.IntegerField(default=0)
     rating = models.FloatField(default=0)
 
+    is_available = models.BooleanField(default=True)
+
     def __str__(self):
         return self.user.username
 

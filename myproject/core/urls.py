@@ -1,16 +1,20 @@
 from django.urls import path, include
-from .views import update_booking_status
 from rest_framework.routers import DefaultRouter
+
 from .views import (
     UserViewSet,
     ServiceViewSet,
     WorkerProfileViewSet,
     BookingViewSet,
+    update_booking_status,
+    worker_dashboard,
+    customer_dashboard,
     test_protected,
 )
 
 from .api import register_user
 
+# Router setup
 router = DefaultRouter()
 router.register(r'users', UserViewSet)
 router.register(r'services', ServiceViewSet)
@@ -19,9 +23,17 @@ router.register(r'bookings', BookingViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),
+
+    # Booking status update
     path("bookings/<int:pk>/status/", update_booking_status),
+
+    # Auth / register
     path('register/', register_user),
 
-    # 🔒 PROTECTED API
+    # Protected test
     path('protected/', test_protected),
+
+    # Dashboards
+    path("worker/dashboard/", worker_dashboard),
+    path("customer/dashboard/", customer_dashboard),
 ]

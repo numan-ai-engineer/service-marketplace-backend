@@ -2,20 +2,29 @@ from rest_framework import serializers
 from .models import User, Service, WorkerProfile, Booking
 
 
+# =========================
+# USER SERIALIZER
+# =========================
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = '__all__'
 
 
+# =========================
+# SERVICE SERIALIZER
+# =========================
 class ServiceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Service
         fields = '__all__'
 
 
-# ⭐ PROFESSIONAL WORKER SERIALIZER
+# =========================
+# WORKER SERIALIZER
+# =========================
 class WorkerProfileSerializer(serializers.ModelSerializer):
+
     user = serializers.SerializerMethodField()
     services = serializers.SerializerMethodField()
 
@@ -33,31 +42,36 @@ class WorkerProfileSerializer(serializers.ModelSerializer):
     def get_services(self, obj):
         return [service.name for service in obj.services.all()]
 
+
+# =========================
+# BOOKING SERIALIZER (FIXED)
+# =========================
 class BookingSerializer(serializers.ModelSerializer):
-    customer = serializers.SerializerMethodField()
-    worker = serializers.SerializerMethodField()
-    service = serializers.SerializerMethodField()
 
     class Meta:
         model = Booking
         fields = '__all__'
+        read_only_fields = ['customer', 'worker']
 
-    def get_customer(self, obj):
-        return {
-            "id": obj.customer.id,
-            "name": obj.customer.username,
-            "phone": obj.customer.phone,
+    # response beautify (optional but helpful)
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+
+        data["customer"] = {
+            "id": instance.customer.id,
+            "name": instance.customer.username,
+            "phone": instance.customer.phone,
         }
 
-    def get_worker(self, obj):
-        return {
-            "id": obj.worker.id,
-            "name": obj.worker.username,
-            "phone": obj.worker.phone,
+        data["worker"] = {
+            "id": instance.worker.id,
+            "name": instance.worker.username,
+            "phone": instance.worker.phone,
         }
 
-    def get_service(self, obj):
-        return {
-            "id": obj.service.id,
-            "name": obj.service.name,
+        data["service"] = {
+            "id": instance.service.id,
+            "name": instance.service.name,
         }
+
+        return data

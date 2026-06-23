@@ -52,10 +52,29 @@ class WorkerProfileViewSet(viewsets.ModelViewSet):
 # =========================
 # BOOKING API
 # =========================
+
 class BookingViewSet(viewsets.ModelViewSet):
     queryset = Booking.objects.all()
     serializer_class = BookingSerializer
 
+    def perform_create(self, serializer):
+
+        service_id = self.request.data.get("service")
+
+        service_obj = Service.objects.get(id=service_id)
+
+        worker = WorkerProfile.objects.filter(
+            services=service_obj
+        ).first()
+
+        if not worker:
+            raise Exception("No worker found for this service")
+
+        serializer.save(
+            customer=self.request.user,
+            worker=worker.user,
+            service=service_obj
+        )
 
 # =========================
 # PROTECTED TEST API (JWT)
@@ -65,10 +84,15 @@ class BookingViewSet(viewsets.ModelViewSet):
 def test_protected(request):
     return Response({
         "message": "You are logged in!",
+
         "user": request.user.username,
         "role": request.user.role
     })
 
+
+# =========================
+# UPDATE BOOKING STATUS
+# =========================
 @api_view(["PATCH"])
 @permission_classes([IsAuthenticated])
 def update_booking_status(request, pk):
@@ -100,3 +124,34 @@ def update_booking_status(request, pk):
 
     except Booking.DoesNotExist:
         return Response({"error": "Booking not found"}, status=404)
+
+
+# =========================
+# WORKER DASHBOARD (FINAL CLEAN VERSION)
+# =========================
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def customer_dashboard(request):
+
+    bookings = Booking.objects.filter(customer_id=request.user.id)
+
+    return Response({
+        "customer": request.user.username,
+        "total_bookings": bookings.count(),
+        "bookings": BookingSerializer(bookings, many=True).data
+    })
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def worker_dashboard(request):
+
+    bookings = Booking.objects.filter(worker_id=request.user.id)
+
+    return Response({
+        "worker": request.user.username,
+        "total": bookings.count(),
+        "pending": bookings.filter(status="pending").count(),
+        "accepted": bookings.filter(status="accepted").count(),
+        "completed": bookings.filter(status="completed").count(),
+        "bookings": BookingSerializer(bookings, many=True).data
+    })
