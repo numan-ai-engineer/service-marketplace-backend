@@ -1,7 +1,8 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.exceptions import ValidationError
 
 from .models import User, Service, WorkerProfile, Booking
 from .serializers import (
@@ -50,9 +51,8 @@ class WorkerProfileViewSet(viewsets.ModelViewSet):
 
 
 # =========================
-# BOOKING API
+# BOOKING API (AUTO ASSIGN FIXED)
 # =========================
-
 class BookingViewSet(viewsets.ModelViewSet):
     queryset = Booking.objects.all()
     serializer_class = BookingSerializer
@@ -61,6 +61,9 @@ class BookingViewSet(viewsets.ModelViewSet):
 
         service_id = self.request.data.get("service")
 
+        if not service_id:
+            raise ValidationError({"service": "Service is required"})
+
         service_obj = Service.objects.get(id=service_id)
 
         worker = WorkerProfile.objects.filter(
@@ -68,7 +71,9 @@ class BookingViewSet(viewsets.ModelViewSet):
         ).first()
 
         if not worker:
-            raise Exception("No worker found for this service")
+            raise ValidationError(
+                {"error": "No worker found for this service"}
+            )
 
         serializer.save(
             customer=self.request.user,
@@ -76,15 +81,15 @@ class BookingViewSet(viewsets.ModelViewSet):
             service=service_obj
         )
 
+
 # =========================
-# PROTECTED TEST API (JWT)
+# PROTECTED TEST API
 # =========================
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def test_protected(request):
     return Response({
         "message": "You are logged in!",
-
         "user": request.user.username,
         "role": request.user.role
     })
@@ -99,7 +104,6 @@ def update_booking_status(request, pk):
     try:
         booking = Booking.objects.get(pk=pk)
 
-        # only assigned worker can update
         if booking.worker != request.user:
             return Response(
                 {"error": "You are not allowed to update this booking"},
@@ -127,7 +131,7 @@ def update_booking_status(request, pk):
 
 
 # =========================
-# WORKER DASHBOARD (FINAL CLEAN VERSION)
+# CUSTOMER DASHBOARD
 # =========================
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
@@ -141,6 +145,10 @@ def customer_dashboard(request):
         "bookings": BookingSerializer(bookings, many=True).data
     })
 
+
+# =========================
+# WORKER DASHBOARD
+# =========================
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def worker_dashboard(request):

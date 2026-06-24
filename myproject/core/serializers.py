@@ -44,7 +44,7 @@ class WorkerProfileSerializer(serializers.ModelSerializer):
 
 
 # =========================
-# BOOKING SERIALIZER (FIXED)
+# BOOKING SERIALIZER (FINAL FIX)
 # =========================
 class BookingSerializer(serializers.ModelSerializer):
 
@@ -53,7 +53,6 @@ class BookingSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ['customer', 'worker']
 
-    # response beautify (optional but helpful)
     def to_representation(self, instance):
         data = super().to_representation(instance)
 
