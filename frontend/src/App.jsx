@@ -1,8 +1,9 @@
 import { useState } from "react";
-import Login from "./Login";
-import Services from "./Services";
-import MyBookings from "./MyBookings";
-import WorkerDashboard from "./WorkerDashboard";
+
+import Login from "./components/Login";
+import Services from "./pages/Services";
+import MyBookings from "./pages/MyBookings";
+import WorkerDashboard from "./pages/WorkerDashboard";
 
 function App() {
   const [page, setPage] = useState("services");
