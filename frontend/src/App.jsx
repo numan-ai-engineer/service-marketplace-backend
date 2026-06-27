@@ -6,40 +6,55 @@ import WorkerDashboard from "./WorkerDashboard";
 
 function App() {
   const [page, setPage] = useState("services");
+  const [loggedIn, setLoggedIn] = useState(
+    !!localStorage.getItem("token")
+  );
 
   return (
     <div style={{ padding: "20px" }}>
       <h1>Service Marketplace</h1>
 
-      <button onClick={() => setPage("services")}>
-        Services
-      </button>
+      {!loggedIn ? (
+        <Login setLoggedIn={setLoggedIn} />
+      ) : (
+        <>
+          <button onClick={() => setPage("services")}>
+            Services
+          </button>
 
-      <button
-        onClick={() => setPage("bookings")}
-        style={{ marginLeft: "10px" }}
-      >
-        My Bookings
-      </button>
+          <button
+            onClick={() => setPage("bookings")}
+            style={{ marginLeft: "10px" }}
+          >
+            My Bookings
+          </button>
 
-      <button
-        onClick={() => setPage("worker")}
-        style={{ marginLeft: "10px" }}
-      >
-        Worker Dashboard
-      </button>
+          <button
+            onClick={() => setPage("worker")}
+            style={{ marginLeft: "10px" }}
+          >
+            Worker Dashboard
+          </button>
 
-      <hr />
+          <button
+            style={{ marginLeft: "10px" }}
+            onClick={() => {
+              localStorage.removeItem("token");
+              setLoggedIn(false);
+            }}
+          >
+            Logout
+          </button>
 
-      <Login />
+          <hr />
 
-      <hr />
+          {page === "services" && <Services />}
 
-      {page === "services" && <Services />}
+          {page === "bookings" && <MyBookings />}
 
-      {page === "bookings" && <MyBookings />}
-
-      {page === "worker" && <WorkerDashboard />}
+          {page === "worker" && <WorkerDashboard />}
+        </>
+      )}
     </div>
   );
 }

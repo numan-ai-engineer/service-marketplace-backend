@@ -1,18 +1,8 @@
-import Services from "./Services";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
-function Login() {
+function Login({ setLoggedIn }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [loggedIn, setLoggedIn] = useState(false);
-
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-
-    if (token) {
-      setLoggedIn(true);
-    }
-  }, []);
 
   const handleLogin = async () => {
     try {
@@ -40,27 +30,9 @@ function Login() {
       }
     } catch (error) {
       console.log(error);
+      alert("Server Error");
     }
   };
-
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    setLoggedIn(false);
-  };
-
-  if (loggedIn) {
-  return (
-    <div>
-      <h1>Welcome!</h1>
-
-      <button onClick={handleLogout}>
-        Logout
-      </button>
-
-      <Services />
-    </div>
-  );
-}
 
   return (
     <div style={{ padding: "20px" }}>
@@ -73,7 +45,8 @@ function Login() {
         onChange={(e) => setUsername(e.target.value)}
       />
 
-      <br /><br />
+      <br />
+      <br />
 
       <input
         type="password"
@@ -82,11 +55,10 @@ function Login() {
         onChange={(e) => setPassword(e.target.value)}
       />
 
-      <br /><br />
+      <br />
+      <br />
 
-      <button onClick={handleLogin}>
-        Login
-      </button>
+      <button onClick={handleLogin}>Login</button>
     </div>
   );
 }
