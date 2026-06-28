@@ -5,6 +5,8 @@ function MyBookings() {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
+    
+console.log("Token:", token);
 
     fetch("http://127.0.0.1:8000/api/customer/dashboard/", {
       headers: {

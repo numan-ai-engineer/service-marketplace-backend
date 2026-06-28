@@ -1,6 +1,10 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
-function Login({ setLoggedIn }) {
+function Login() {
+  const navigate = useNavigate();
+
+
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
@@ -24,7 +28,7 @@ function Login({ setLoggedIn }) {
 
       if (data.access) {
         localStorage.setItem("token", data.access);
-        setLoggedIn(true);
+        navigate("/services");
       } else {
         alert("Login Failed");
       }
