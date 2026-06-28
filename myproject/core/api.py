@@ -1,3 +1,5 @@
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import permission_classes
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
@@ -8,13 +10,14 @@ from .serializers import UserSerializer
 
 @api_view(["POST"])
 def register_user(request):
+
     data = request.data
 
     username = data.get("username")
     password = data.get("password")
     phone = data.get("phone")
     role = data.get("role", "customer")
-
+  
     if not username:
         return Response(
             {"error": "Username is required"},
@@ -55,3 +58,10 @@ def register_user(request):
     serializer = UserSerializer(user)
 
     return Response(serializer.data, status=status.HTTP_201_CREATED)
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def current_user(request):
+    return Response({
+        "username": request.user.username,
+        "role": request.user.role,
+    })

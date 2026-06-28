@@ -12,7 +12,7 @@ from .views import (
     test_protected,
 )
 
-from .api import register_user
+from .api import register_user, current_user
 
 # Router setup
 router = DefaultRouter()
@@ -29,6 +29,7 @@ urlpatterns = [
 
     # Auth / register
     path('register/', register_user),
+    path("me/", current_user),
 
     # Protected test
     path('protected/', test_protected),

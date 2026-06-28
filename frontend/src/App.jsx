@@ -5,6 +5,7 @@ import Login from "./components/Login";
 import Home from "./pages/Home";
 import Services from "./pages/Services";
 import MyBookings from "./pages/MyBookings";
+import WorkerDashboard from "./pages/WorkerDashboard";
 
 function App() {
   return (
@@ -16,6 +17,8 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/services" element={<Services />} />
         <Route path="/my-bookings" element={<MyBookings />} />
+        <Route path="/worker-dashboard" element={<WorkerDashboard />}
+/>
       </Routes>
     </>
   );
