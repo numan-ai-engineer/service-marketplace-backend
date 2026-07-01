@@ -1,4 +1,3 @@
-
 import { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import UserContext from "../context/UserContext";
@@ -30,7 +29,8 @@ function Login() {
 
       if (data.access) {
         // Save Token
-        localStorage.setItem("token", data.access);
+       localStorage.setItem("access", data.access);
+       localStorage.setItem("refresh", data.refresh);
 
         // Get Current User
         const userResponse = await fetch(

@@ -4,7 +4,7 @@ function WorkerDashboard() {
   const [dashboard, setDashboard] = useState(null);
 
   const loadDashboard = () => {
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("access");
 
     fetch("http://127.0.0.1:8000/api/worker/dashboard/", {
       headers: {
@@ -26,7 +26,7 @@ function WorkerDashboard() {
   const updateStatus = async (bookingId, status) => {
     console.log("Booking ID:", bookingId);
 console.log("Status:", status);
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("access");
 
     const response = await fetch(
       `http://127.0.0.1:8000/api/bookings/${bookingId}/status/`,

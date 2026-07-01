@@ -1,29 +1,25 @@
 import { useEffect, useState } from "react";
+import api from "../utils/api";
 
 function MyBookings() {
   const [bookings, setBookings] = useState([]);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    
-console.log("Token:", token);
+    const loadBookings = async () => {
+  try {
+    const response = await api.get("/customer/dashboard/");
 
-    fetch("http://127.0.0.1:8000/api/customer/dashboard/", {
-      headers: {
-        Authorization: "Bearer " + token,
-      },
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        console.log("Dashboard Data:", data);
+    console.log(response.data);
 
-        if (data.bookings) {
-          setBookings(data.bookings);
-        } else {
-          setBookings([]);
-        }
-      })
-      .catch((error) => console.log(error));
+    if (response.ok) {
+      setBookings(response.data.bookings || []);
+    }
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+loadBookings();
   }, []);
 
   return (

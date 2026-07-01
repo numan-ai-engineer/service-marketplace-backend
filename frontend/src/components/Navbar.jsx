@@ -1,97 +1,86 @@
 import { Link, useNavigate } from "react-router-dom";
+import {
+  Navbar as BSNavbar,
+  Nav,
+  Container,
+  Button,
+} from "react-bootstrap";
 import { useContext } from "react";
 import UserContext from "../context/UserContext";
 
 function Navbar() {
-    const navigate = useNavigate();
-    const { user } = useContext(UserContext);
+  const navigate = useNavigate();
 
-    console.log(user);
+  const { user, setUser } = useContext(UserContext);
+
+  console.log(user);
+
+  const handleLogout = () => {
+    localStorage.removeItem("access");
+    localStorage.removeItem("refresh");
+
+    setUser(null);
+
+    navigate("/login");
+  };
 
   return (
-    <nav
-      style={{
-        padding: "15px",
-        backgroundColor: "#1976d2",
-      }}
-    >
-      <Link
-        to="/"
-        style={{
-          color: "white",
-          marginRight: "20px",
-          textDecoration: "none",
-          fontWeight: "bold",
-        }}
-      >
-        Home
-      </Link>
+    <BSNavbar bg="primary" variant="dark" expand="lg">
+      <Container>
+        <BSNavbar.Brand as={Link} to="/">
+          Service Marketplace
+        </BSNavbar.Brand>
 
-      {!user && (
-  <Link
-    to="/login"
-    style={{
-      color: "white",
-      marginRight: "20px",
-      textDecoration: "none",
-    }}
-  >
-    Login
-  </Link>
-)}
-{user && (
-  <Link
-    to="/services"
-    style={{
-      color: "white",
-      textDecoration: "none",
-    }}
-  >
-    Services
-  </Link>
-)}
-    
-{user?.role === "customer" && (
-  <Link
-    to="/my-bookings"
-    style={{
-      color: "white",
-      marginLeft: "20px",
-      textDecoration: "none",
-    }}
-  >
-    My Bookings
-  </Link>
-)}
-{user?.role === "worker" && (
-  <Link
-    to="/worker-dashboard"
-    style={{
-      color: "white",
-      marginLeft: "20px",
-      textDecoration: "none",
-    }}
-  >
-    Worker Dashboard
-  </Link>
-)}
+        <BSNavbar.Toggle aria-controls="basic-navbar-nav" />
 
-{user && (
-  <button
-    onClick={() => {
-      localStorage.removeItem("token");
-      navigate("/login");
-    }}
-    style={{
-      marginLeft: "20px",
-      padding: "5px 10px",
-      cursor: "pointer",
-    }}
-  >
-    Logout
-  </button>
-)}
-    </nav>
+        <BSNavbar.Collapse id="basic-navbar-nav">
+          <Nav className="me-auto">
+            <Nav.Link as={Link} to="/">
+              Home
+            </Nav.Link>
+
+            {!user && (
+              <Nav.Link as={Link} to="/login">
+                Login
+              </Nav.Link>
+            )}
+
+            {user && (
+              <Nav.Link as={Link} to="/services">
+                Services
+              </Nav.Link>
+            )}
+
+            {user && (
+              <Nav.Link as={Link} to="/profile">
+                Profile
+              </Nav.Link>
+            )}
+
+            {user?.role === "customer" && (
+              <Nav.Link as={Link} to="/my-bookings">
+                My Bookings
+              </Nav.Link>
+            )}
+
+            {user?.role === "worker" && (
+              <Nav.Link as={Link} to="/worker-dashboard">
+                Worker Dashboard
+              </Nav.Link>
+            )}
+          </Nav>
+
+          {user && (
+            <Button
+              variant="light"
+              onClick={handleLogout}
+            >
+              Logout
+            </Button>
+          )}
+        </BSNavbar.Collapse>
+      </Container>
+    </BSNavbar>
   );
 }
 

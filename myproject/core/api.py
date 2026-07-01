@@ -58,10 +58,12 @@ def register_user(request):
     serializer = UserSerializer(user)
 
     return Response(serializer.data, status=status.HTTP_201_CREATED)
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def current_user(request):
     return Response({
         "username": request.user.username,
+        "phone": request.user.phone,
         "role": request.user.role,
     })

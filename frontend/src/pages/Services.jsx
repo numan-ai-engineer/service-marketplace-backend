@@ -1,41 +1,42 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import api from "../utils/api";
+import { Container, Row, Col, Card, Button } from "react-bootstrap";
 
 function Services() {
+  const navigate = useNavigate();
   const [services, setServices] = useState([]);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/api/services/")
-      .then((response) => response.json())
-      .then((data) => {
-        console.log("Services:", data);
-        setServices(data);
-      })
-      .catch((error) => console.log(error));
+    const loadServices = async () => {
+  try {
+    const response = await api.get("/services/");
+
+    console.log("Services:", response.data);
+
+    if (response.ok) {
+      setServices(response.data);
+    }
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+loadServices();
   }, []);
 
   const handleBooking = async (serviceId) => {
-    alert("Button Clicked");
+    
 
     console.log("Service ID:", serviceId);
 
     try {
-      const token = localStorage.getItem("token");
+      const response = await api.post("/bookings/", {
+  service: serviceId,
+});
 
-      const response = await fetch(
-        "http://127.0.0.1:8000/api/bookings/",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: "Bearer " + token,
-          },
-          body: JSON.stringify({
-            service: serviceId,
-          }),
-        }
-      );
-
-      const data = await response.json();
+const data = response.data;
 
       console.log("Booking Response:", data);
 
@@ -51,29 +52,46 @@ function Services() {
   };
 
   return (
-    <div style={{ padding: "20px" }}>
+    <Container className="mt-5">
       <h2>Available Services</h2>
+      <input
+  type="text"
+  placeholder="Search Services..."
+  className="form-control mb-4"
+  value={search}
+  onChange={(e) => setSearch(e.target.value)}
+/>
 
-      {services.map((service) => (
-        <div
-          key={service.id}
-          style={{
-            border: "1px solid gray",
-            padding: "10px",
-            marginBottom: "10px",
-            borderRadius: "10px",
-          }}
-        >
-          <h3>{service.name}</h3>
+      <Row className="mt-4">
 
-          <p>{service.description}</p>
+      {services
+  .filter((service) =>
+    service.name.toLowerCase().includes(search.toLowerCase())
+  )
+  .map((service) => (
+        <Col md={4} className="mb-4" key={service.id}>
+  <Card className="shadow h-100">
+  <Card.Body>
 
-          <button onClick={() => handleBooking(service.id)}>
-            Book Now
-          </button>
-        </div>
-      ))}
-    </div>
+    <Card.Title>{service.name}</Card.Title>
+
+    <Card.Text>
+      {service.description}
+    </Card.Text>
+
+    <Button
+  variant="primary"
+  onClick={() => navigate(`/services/${service.id}`)}
+>
+  View Details
+</Button>
+    </Card.Body>
+</Card>
+</Col>
+))}
+
+       </Row>
+</Container> 
   );
 }
 
