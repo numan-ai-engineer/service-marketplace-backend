@@ -1,3 +1,4 @@
+from django.db.models import Avg
 from rest_framework import viewsets, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -103,6 +104,16 @@ class ReviewViewSet(viewsets.ModelViewSet):
             worker=worker_profile,
             booking=booking,
         )
+
+        average_rating = Review.objects.filter(
+            worker=worker_profile
+        ).aggregate(
+            Avg("rating")
+        )
+        print("Average Rating:", average_rating)
+
+        worker_profile.rating = average_rating["rating__avg"]
+        worker_profile.save()
 
 # =========================
 # PROTECTED TEST API
