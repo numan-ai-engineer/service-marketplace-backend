@@ -28,8 +28,9 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
 
-    # Your app
+    # Your apps
     'core',
+    'reviews',
 ]
 
 

@@ -6,6 +6,9 @@ function BookingDetails() {
   const { id } = useParams();
 
   const [booking, setBooking] = useState(null);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+const [rating, setRating] = useState("");
+const [comment, setComment] = useState("");
 
   useEffect(() => {
     const token = localStorage.getItem("access");
@@ -55,6 +58,13 @@ function BookingDetails() {
 
         <h5 className="mt-3">
           <strong>Status:</strong>{" "}
+<Button
+    className="mt-4"
+    variant="primary"
+    onClick={() => setShowReviewForm(true)}
+>
+    Give Review
+</Button>
           <Badge bg="success">
             {booking.status}
           </Badge>

@@ -1,9 +1,52 @@
 const BASE_URL = "http://127.0.0.1:8000/api";
 
-async function request(endpoint, options = {}) {
-  const access = localStorage.getItem("access");
+// =========================
+// Refresh Access Token
+// =========================
+async function refreshAccessToken() {
+  const refresh = localStorage.getItem("refresh");
 
-  const headers = {
+  if (!refresh) {
+    return null;
+  }
+
+  try {
+    const response = await fetch(`${BASE_URL}/token/refresh/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        refresh,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      localStorage.setItem("access", data.access);
+      return data.access;
+    }
+
+    localStorage.removeItem("access");
+localStorage.removeItem("refresh");
+
+window.location.href = "/login";
+
+return null;
+  } catch (error) {
+    console.log("Refresh Token Error:", error);
+    return null;
+  }
+}
+
+// =========================
+// Main Request Function
+// =========================
+async function request(endpoint, options = {}) {
+  let access = localStorage.getItem("access");
+
+  let headers = {
     "Content-Type": "application/json",
     ...(options.headers || {}),
   };
@@ -12,10 +55,27 @@ async function request(endpoint, options = {}) {
     headers.Authorization = `Bearer ${access}`;
   }
 
-  const response = await fetch(`${BASE_URL}${endpoint}`, {
+  let response = await fetch(`${BASE_URL}${endpoint}`, {
     ...options,
     headers,
   });
+
+  // اگر Access Token Expire ہو جائے
+  if (response.status === 401) {
+    const newAccess = await refreshAccessToken();
+
+    if (newAccess) {
+      headers = {
+        ...headers,
+        Authorization: `Bearer ${newAccess}`,
+      };
+
+      response = await fetch(`${BASE_URL}${endpoint}`, {
+        ...options,
+        headers,
+      });
+    }
+  }
 
   const data = await response.json();
 
@@ -26,6 +86,9 @@ async function request(endpoint, options = {}) {
   };
 }
 
+// =========================
+// API Methods
+// =========================
 const api = {
   get(endpoint) {
     return request(endpoint);

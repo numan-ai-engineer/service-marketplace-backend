@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, Service, WorkerProfile, Booking
+from .models import User, Service, WorkerProfile, Booking, Review
 
 
 # =========================
@@ -72,5 +72,30 @@ class BookingSerializer(serializers.ModelSerializer):
             "id": instance.service.id,
             "name": instance.service.name,
         }
-
+        
         return data
+    
+class ReviewSerializer(serializers.ModelSerializer):
+    customer_name = serializers.CharField(
+        source="customer.username",
+        read_only=True,
+    )
+
+    class Meta:
+        model = Review
+        fields = [
+            "id",
+            "customer",
+            "customer_name",
+            "worker",
+            "booking",
+            "rating",
+            "comment",
+            "created_at",
+        ]
+
+        read_only_fields = [
+            "customer",
+            "worker",
+            "created_at",
+        ]

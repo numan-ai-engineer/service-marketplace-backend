@@ -26,7 +26,8 @@ function WorkerDashboard() {
   const updateStatus = async (bookingId, status) => {
     console.log("Booking ID:", bookingId);
 console.log("Status:", status);
-    const token = localStorage.getItem("access");
+    const
+     token = localStorage.getItem("access");
 
     const response = await fetch(
       `http://127.0.0.1:8000/api/bookings/${bookingId}/status/`,

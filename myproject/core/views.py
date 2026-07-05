@@ -4,12 +4,13 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
 
-from .models import User, Service, WorkerProfile, Booking
+from .models import User, Service, WorkerProfile, Booking, Review
 from .serializers import (
     UserSerializer,
     ServiceSerializer,
     WorkerProfileSerializer,
-    BookingSerializer
+    BookingSerializer,
+    ReviewSerializer,
 )
 
 # =========================
@@ -78,9 +79,30 @@ class BookingViewSet(viewsets.ModelViewSet):
         serializer.save(
             customer=self.request.user,
             worker=worker.user,
-            service=service_obj
+            service=service_obj,
         )
 
+# =========================
+# REVIEW API
+# =========================
+class ReviewViewSet(viewsets.ModelViewSet):
+    queryset = Review.objects.all()
+    serializer_class = ReviewSerializer
+
+    def perform_create(self, serializer):
+        booking_id = self.request.data.get("booking")
+
+        booking = Booking.objects.get(id=booking_id)
+
+        worker_profile = WorkerProfile.objects.get(
+            user=booking.worker
+        )
+
+        serializer.save(
+            customer=self.request.user,
+            worker=worker_profile,
+            booking=booking,
+        )
 
 # =========================
 # PROTECTED TEST API

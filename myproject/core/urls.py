@@ -6,10 +6,12 @@ from .views import (
     ServiceViewSet,
     WorkerProfileViewSet,
     BookingViewSet,
+    ReviewViewSet,
     update_booking_status,
     worker_dashboard,
     customer_dashboard,
     test_protected,
+    
 )
 
 from .api import register_user, current_user
@@ -20,6 +22,7 @@ router.register(r'users', UserViewSet)
 router.register(r'services', ServiceViewSet)
 router.register(r'workers', WorkerProfileViewSet)
 router.register(r'bookings', BookingViewSet)
+router.register(r'reviews', ReviewViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),

@@ -10,6 +10,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import ServiceDetails from "./pages/ServiceDetails";
 import Profile from "./pages/Profile";
 import BookingDetails from "./pages/BookingDetails";
+import WorkerProfile from "./pages/WorkerProfile";
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
        <Route path="/services/:id" element={<ServiceDetails />}/>
        <Route path="/profile" element={<Profile />} />
        <Route path="/booking/:id" element={<BookingDetails />}/>
+       <Route path="/worker/:id" element={<WorkerProfile />} />
 
       </Routes>
     </>
