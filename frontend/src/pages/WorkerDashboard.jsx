@@ -58,10 +58,23 @@ console.log("Status:", status);
     <div style={{ padding: "20px" }}>
       <h2>Worker Dashboard</h2>
 
-      <p>Total Jobs: {dashboard.total}</p>
-      <p>Pending: {dashboard.pending}</p>
-      <p>Accepted: {dashboard.accepted}</p>
-      <p>Completed: {dashboard.completed}</p>
+    <h3>Welcome {dashboard.worker}</h3>
+
+<hr />
+
+<p>⭐ Average Rating: {dashboard.rating}</p>
+
+<p>📝 Total Reviews: {dashboard.total_reviews}</p>
+
+<hr />
+
+<p>Total Jobs: {dashboard.total}</p>
+
+<p>Pending Jobs: {dashboard.pending}</p>
+
+<p>Accepted Jobs: {dashboard.accepted}</p>
+
+<p>Completed Jobs: {dashboard.completed}</p>
 
       <hr />
 

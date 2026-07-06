@@ -22,6 +22,8 @@ function WorkerProfile() {
   const [comment, setComment] = useState("");
 
   const [bookingId, setBookingId] = useState("");
+  const [editingReviewId, setEditingReviewId] = useState(null);
+const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     loadWorker();
@@ -52,6 +54,7 @@ const loadReviews = async () => {
     const workerReviews = response.data.filter(
       (review) => review.worker == id
     );
+    console.log(workerReviews);
 
     setReviews(workerReviews);
   }
@@ -86,9 +89,10 @@ const loadBooking = async () => {
 
 const submitReview = async (e) => {
   e.preventDefault();
+
   console.log("Booking ID:", bookingId);
-console.log("Rating:", rating);
-console.log("Comment:", comment);
+  console.log("Rating:", rating);
+  console.log("Comment:", comment);
 
   const token = localStorage.getItem("access");
 
@@ -97,7 +101,23 @@ console.log("Comment:", comment);
     return;
   }
 
-  const response = await api.post(
+ let response;
+
+if (isEditing) {
+  response = await api.patch(
+    `/reviews/${editingReviewId}/`,
+    {
+      rating: Number(rating),
+      comment: comment,
+    },
+    {
+      headers: {
+        Authorization: "Bearer " + token,
+      },
+    }
+  );
+} else {
+  response = await api.post(
     "/reviews/",
     {
       booking: bookingId,
@@ -110,21 +130,58 @@ console.log("Comment:", comment);
       },
     }
   );
+}
 
   console.log(response);
   console.log("Status:", response.status);
-console.log("Data:", response.data);
+  console.log("Data:", response.data);
 
 if (response.ok) {
-  alert("Review Submitted Successfully!");
+  alert(
+    isEditing
+      ? "Review Updated Successfully!"
+      : "Review Submitted Successfully!"
+  );
+
+  setIsEditing(false);
+  setEditingReviewId(null);
+
+  setRating(5);
+  setComment("");
+
+  loadReviews();
 } else {
   console.log(response);
   alert(JSON.stringify(response.data));
 }
 };
+
+const deleteReview = async (reviewId) => {
+  const token = localStorage.getItem("access");
+
+  const response = await api.delete(
+    `/reviews/${reviewId}/`,
+    {
+      headers: {
+        Authorization: "Bearer " + token,
+      },
+    }
+  );
+
+  console.log(response);
+
+  if (response.ok) {
+    alert("Review Deleted Successfully!");
+    loadReviews();
+  } else {
+    alert("Delete Failed!");
+  }
+};
+
 if (!worker) {
   return <h2 className="text-center mt-5">Loading...</h2>;
 }
+
 
 return (
   <Container className="mt-5">
@@ -198,9 +255,10 @@ return (
         </Form.Group>
 
         <Button variant="primary" type="submit">
-          Submit Review
-        </Button>
+  {isEditing ? "Update Review" : "Submit Review"}
+</Button>
       </Form>
+ 
 
       <hr className="my-4" />
 
@@ -218,6 +276,34 @@ return (
             <small>
               By: <strong>{review.customer_name}</strong>
             </small>
+            <div className="mt-2">
+  <Button
+  variant="warning"
+  size="sm"
+  onClick={() => {
+    setIsEditing(true);
+    setEditingReviewId(review.id);
+    setRating(review.rating);
+    setComment(review.comment);
+    window.scrollTo({
+  top: 0,
+  behavior: "smooth",
+});
+  }}
+>
+  Edit
+</Button>
+
+  <Button
+    variant="danger"
+    size="sm"
+    className="ms-2"
+    onClick={() => deleteReview(review.id)}
+  >
+    Delete
+  </Button>
+</div>
+
           </Card>
         ))
       )}

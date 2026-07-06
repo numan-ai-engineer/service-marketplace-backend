@@ -90,6 +90,19 @@ class ReviewViewSet(viewsets.ModelViewSet):
     queryset = Review.objects.all()
     serializer_class = ReviewSerializer
 
+    def get_queryset(self):
+        return Review.objects.all()
+
+    def get_object(self):
+        review = super().get_object()
+
+        if review.customer != self.request.user:
+            raise ValidationError(
+                {"error": "You can edit only your own review."}
+            )
+
+        return review
+
     def perform_create(self, serializer):
         booking_id = self.request.data.get("booking")
 
@@ -110,10 +123,21 @@ class ReviewViewSet(viewsets.ModelViewSet):
         ).aggregate(
             Avg("rating")
         )
-        print("Average Rating:", average_rating)
 
-        worker_profile.rating = average_rating["rating__avg"]
+        worker_profile.rating = average_rating["rating__avg"] or 0
         worker_profile.save()
+
+    def perform_update(self, serializer):
+        review = serializer.save()
+
+        average_rating = Review.objects.filter(
+            worker=review.worker
+        ).aggregate(
+            Avg("rating")
+        )
+
+        review.worker.rating = average_rating["rating__avg"] or 0
+        review.worker.save()
 
 # =========================
 # PROTECTED TEST API
@@ -188,11 +212,23 @@ def worker_dashboard(request):
 
     bookings = Booking.objects.filter(worker_id=request.user.id)
 
+    worker_profile = WorkerProfile.objects.get(
+        user=request.user
+    )
+
+    total_reviews = Review.objects.filter(
+        worker=worker_profile
+    ).count()
+
     return Response({
         "worker": request.user.username,
+        "rating": worker_profile.rating,
+        "total_reviews": total_reviews,
+
         "total": bookings.count(),
         "pending": bookings.filter(status="pending").count(),
         "accepted": bookings.filter(status="accepted").count(),
         "completed": bookings.filter(status="completed").count(),
+
         "bookings": BookingSerializer(bookings, many=True).data
     })
