@@ -161,17 +161,41 @@ def update_booking_status(request, pk):
     try:
         booking = Booking.objects.get(pk=pk)
 
+        new_status = request.data.get("status")
+
+        # Customer can cancel only own pending booking
+        if new_status == "cancelled":
+
+            if booking.customer != request.user:
+                return Response(
+                    {"error": "You can cancel only your own booking."},
+                    status=403
+                )
+
+            if booking.status != "pending":
+                return Response(
+                    {"error": "Only pending bookings can be cancelled."},
+                    status=400
+                )
+
+            booking.status = "cancelled"
+            booking.save()
+
+            return Response({
+                "message": "Booking cancelled successfully.",
+                "status": booking.status
+            })
+
+        # Worker can accept / reject / complete
         if booking.worker != request.user:
             return Response(
-                {"error": "You are not allowed to update this booking"},
+                {"error": "You are not allowed to update this booking."},
                 status=403
             )
 
-        new_status = request.data.get("status")
-
         if new_status not in ["accepted", "rejected", "completed"]:
             return Response(
-                {"error": "Invalid status"},
+                {"error": "Invalid status."},
                 status=400
             )
 
@@ -179,12 +203,15 @@ def update_booking_status(request, pk):
         booking.save()
 
         return Response({
-            "message": "Booking updated successfully",
+            "message": "Booking updated successfully.",
             "status": booking.status
         })
 
     except Booking.DoesNotExist:
-        return Response({"error": "Booking not found"}, status=404)
+        return Response(
+            {"error": "Booking not found."},
+            status=404
+        )
 
 
 # =========================
@@ -194,14 +221,27 @@ def update_booking_status(request, pk):
 @permission_classes([IsAuthenticated])
 def customer_dashboard(request):
 
-    bookings = Booking.objects.filter(customer_id=request.user.id)
+    bookings = Booking.objects.filter(
+        customer_id=request.user.id
+    )
 
     return Response({
         "customer": request.user.username,
+
         "total_bookings": bookings.count(),
+
+        "pending": bookings.filter(status="pending").count(),
+
+        "accepted": bookings.filter(status="accepted").count(),
+
+        "completed": bookings.filter(status="completed").count(),
+
+        "cancelled": bookings.filter(status="cancelled").count(),
+
+        "rejected": bookings.filter(status="rejected").count(),
+
         "bookings": BookingSerializer(bookings, many=True).data
     })
-
 
 # =========================
 # WORKER DASHBOARD

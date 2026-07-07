@@ -72,6 +72,8 @@ class BookingSerializer(serializers.ModelSerializer):
             "id": instance.service.id,
             "name": instance.service.name,
         }
+
+        data["booking_date"] = instance.created_at
         
         return data
     

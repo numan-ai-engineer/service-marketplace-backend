@@ -44,11 +44,7 @@ function Navbar() {
                 Login
               </Nav.Link>
             )}
-            
-            <Nav.Link as={Link} to="/customer-dashboard">
-  Customer Dashboard
-</Nav.Link>
-
+    
             {user && (
               <Nav.Link as={Link} to="/services">
                 Services
@@ -73,6 +69,12 @@ function Navbar() {
               </Nav.Link>
             )}
           </Nav>
+
+          {user?.role === "customer" && (
+  <Nav.Link as={Link} to="/customer-dashboard">
+    Customer Dashboard
+  </Nav.Link>
+)}
 
           {user && (
             <Button

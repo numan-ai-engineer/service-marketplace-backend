@@ -3,20 +3,31 @@ import { useEffect, useState } from "react";
 function WorkerDashboard() {
   const [dashboard, setDashboard] = useState(null);
 
-  const loadDashboard = () => {
+  const loadDashboard = async () => {
     const token = localStorage.getItem("access");
 
-    fetch("http://127.0.0.1:8000/api/worker/dashboard/", {
-      headers: {
-        Authorization: "Bearer " + token,
-      },
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        console.log(data);
-        setDashboard(data);
-      })
-      .catch((error) => console.log(error));
+const response = await fetch(
+  "http://127.0.0.1:8000/api/worker/dashboard/",
+  {
+    headers: {
+      Authorization: "Bearer " + token,
+    },
+  }
+);
+
+console.log("Status:", response.status);
+
+if (!response.ok) {
+  const text = await response.text();
+  console.log(text);
+  return;
+}
+
+const data = await response.json();
+
+console.log(data);
+
+setDashboard(data);
   };
 
   useEffect(() => {
