@@ -5,7 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
 
-from .models import User, Service, WorkerProfile, Booking, Review
+from .models import User, Service, WorkerProfile, Booking, Review, Notification
 from .serializers import (
     UserSerializer,
     ServiceSerializer,
@@ -82,6 +82,10 @@ class BookingViewSet(viewsets.ModelViewSet):
             worker=worker.user,
             service=service_obj,
         )
+        Notification.objects.create(
+    user=worker.user,
+    message=f"You have received a new booking for {service_obj.name} service."
+)
 
 # =========================
 # REVIEW API
