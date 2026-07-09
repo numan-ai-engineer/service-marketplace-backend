@@ -56,6 +56,11 @@ function Navbar() {
                 Profile
               </Nav.Link>
             )}
+            {user && (
+  <Nav.Link as={Link} to="/notifications">
+    🔔 Notifications
+  </Nav.Link>
+)}
 
             {user?.role === "customer" && (
               <Nav.Link as={Link} to="/my-bookings">

@@ -276,3 +276,22 @@ def worker_dashboard(request):
 
         "bookings": BookingSerializer(bookings, many=True).data
     })
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def notifications(request):
+
+    notifications = Notification.objects.filter(
+        user=request.user
+    ).order_by("-created_at")
+
+    data = []
+
+    for notification in notifications:
+        data.append({
+            "id": notification.id,
+            "message": notification.message,
+            "is_read": notification.is_read,
+            "created_at": notification.created_at,
+        })
+
+    return Response(data)

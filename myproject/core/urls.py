@@ -11,7 +11,7 @@ from .views import (
     worker_dashboard,
     customer_dashboard,
     test_protected,
-    
+    notifications,
 )
 
 from .api import register_user, current_user
@@ -40,4 +40,5 @@ urlpatterns = [
     # Dashboards
     path("worker/dashboard/", worker_dashboard),
     path("customer/dashboard/", customer_dashboard),
+    path("notifications/", notifications),
 ]
