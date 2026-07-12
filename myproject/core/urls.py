@@ -12,6 +12,7 @@ from .views import (
     customer_dashboard,
     test_protected,
     notifications,
+    notification_count,
 )
 
 from .api import register_user, current_user
@@ -41,4 +42,5 @@ urlpatterns = [
     path("worker/dashboard/", worker_dashboard),
     path("customer/dashboard/", customer_dashboard),
     path("notifications/", notifications),
+    path("notifications/count/", notification_count),
 ]

@@ -5,19 +5,47 @@ import {
   Container,
   Button,
 } from "react-bootstrap";
-import { useContext } from "react";
+import { useContext, useEffect, useState } from "react";
 import UserContext from "../context/UserContext";
 
 function Navbar() {
   const navigate = useNavigate();
 
   const { user, setUser } = useContext(UserContext);
+  const [notificationCount, setNotificationCount] = useState(0);
 
   console.log(user);
+const loadNotificationCount = async () => {
+  const token = localStorage.getItem("access");
 
+  if (!token) return;
+
+  try {
+    const response = await fetch(
+      "http://127.0.0.1:8000/api/notifications/count/",
+      {
+        headers: {
+          Authorization: "Bearer " + token,
+        },
+      }
+    );
+
+    const data = await response.json();
+    console.log("Notification Count API:", JSON.stringify(data));
+    setNotificationCount(data.count);
+  } catch (error) {
+    console.log(error);
+  }
+};
+useEffect(() => {
+  if (user) {
+    loadNotificationCount();
+  }
+}, [user]);
   const handleLogout = () => {
     localStorage.removeItem("access");
     localStorage.removeItem("refresh");
+    localStorage.removeItem("user");
 
     setUser(null);
 
@@ -56,11 +84,25 @@ function Navbar() {
                 Profile
               </Nav.Link>
             )}
+
             {user && (
   <Nav.Link as={Link} to="/notifications">
     🔔 Notifications
+    {notificationCount > 0 && (
+      <span
+        style={{
+          color: "yellow",
+          fontWeight: "bold",
+          marginLeft: "5px",
+        }}
+      >
+        ({notificationCount})
+      </span>
+    )}
   </Nav.Link>
 )}
+            
+
 
             {user?.role === "customer" && (
               <Nav.Link as={Link} to="/my-bookings">

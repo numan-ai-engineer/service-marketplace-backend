@@ -283,6 +283,9 @@ def notifications(request):
     notifications = Notification.objects.filter(
         user=request.user
     ).order_by("-created_at")
+    notifications.filter(is_read=False).update(
+    is_read=True
+)   
 
     data = []
 
@@ -295,3 +298,15 @@ def notifications(request):
         })
 
     return Response(data)
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def notification_count(request):
+
+    count = Notification.objects.filter(
+        user=request.user,
+        is_read=False
+    ).count()
+
+    return Response({
+        "count": count
+    })

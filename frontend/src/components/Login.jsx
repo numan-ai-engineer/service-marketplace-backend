@@ -44,6 +44,9 @@ function Login() {
 
         const userData = await userResponse.json();
 
+        // Save User in Local Storage
+localStorage.setItem("user", JSON.stringify(userData));
+
         // Save User in Context
         setUser(userData);
 
