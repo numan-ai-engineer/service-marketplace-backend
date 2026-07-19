@@ -13,6 +13,7 @@ from .views import (
     test_protected,
     notifications,
     notification_count,
+    upload_verification,
 )
 
 from .api import register_user, current_user
@@ -26,21 +27,30 @@ router.register(r'bookings', BookingViewSet)
 router.register(r'reviews', ReviewViewSet)
 
 urlpatterns = [
-    path('', include(router.urls)),
 
-    # Booking status update
+    # Booking Status
     path("bookings/<int:pk>/status/", update_booking_status),
 
-    # Auth / register
-    path('register/', register_user),
+    # Auth
+    path("register/", register_user),
     path("me/", current_user),
 
-    # Protected test
-    path('protected/', test_protected),
+    # Protected
+    path("protected/", test_protected),
 
     # Dashboards
     path("worker/dashboard/", worker_dashboard),
     path("customer/dashboard/", customer_dashboard),
+
+    # Notifications
     path("notifications/", notifications),
     path("notifications/count/", notification_count),
+
+    # Routes
+    path("", include(router.urls)),
+
+    path(
+    "worker/upload-verification/",
+    upload_verification,
+),
 ]

@@ -77,7 +77,11 @@ async function request(endpoint, options = {}) {
     }
   }
 
-  const data = await response.json();
+  let data = {};
+
+if (response.status !== 204) {
+  data = await response.json();
+}
 
   return {
     ok: response.ok,
@@ -115,11 +119,12 @@ const api = {
     });
   },
 
-  delete(endpoint) {
-    return request(endpoint, {
-      method: "DELETE",
-    });
-  },
+delete(endpoint, options = {}) {
+  return request(endpoint, {
+    method: "DELETE",
+    ...options,
+  });
+},
 };
 
 export default api;

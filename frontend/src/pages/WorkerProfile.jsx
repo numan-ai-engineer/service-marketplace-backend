@@ -22,8 +22,12 @@ function WorkerProfile() {
   const [comment, setComment] = useState("");
 
   const [bookingId, setBookingId] = useState("");
+
   const [editingReviewId, setEditingReviewId] = useState(null);
+
 const [isEditing, setIsEditing] = useState(false);
+
+console.log("isEditing =", isEditing);
 
   useEffect(() => {
     loadWorker();
@@ -109,11 +113,6 @@ if (isEditing) {
     {
       rating: Number(rating),
       comment: comment,
-    },
-    {
-      headers: {
-        Authorization: "Bearer " + token,
-      },
     }
   );
 } else {
@@ -123,11 +122,6 @@ if (isEditing) {
       booking: bookingId,
       rating: Number(rating),
       comment: comment,
-    },
-    {
-      headers: {
-        Authorization: "Bearer " + token,
-      },
     }
   );
 }
@@ -157,6 +151,8 @@ if (response.ok) {
 };
 
 const deleteReview = async (reviewId) => {
+
+  console.log("Deleting Review ID:", reviewId);
   const token = localStorage.getItem("access");
 
   const response = await api.delete(
@@ -170,12 +166,13 @@ const deleteReview = async (reviewId) => {
 
   console.log(response);
 
-  if (response.ok) {
-    alert("Review Deleted Successfully!");
-    loadReviews();
-  } else {
-    alert("Delete Failed!");
-  }
+if (response.ok) {
+  alert("Review Deleted Successfully!");
+  loadReviews();
+} else {
+  console.log(response);
+  alert(JSON.stringify(response.data));
+}
 };
 
 if (!worker) {
@@ -281,6 +278,8 @@ return (
   variant="warning"
   size="sm"
   onClick={() => {
+    console.log("Edit Button Clicked", review.id);
+
     setIsEditing(true);
     setEditingReviewId(review.id);
     setRating(review.rating);

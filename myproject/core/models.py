@@ -35,6 +35,38 @@ class WorkerProfile(models.Model):
     experience_years = models.IntegerField(default=0)
     rating = models.FloatField(default=0)
 
+    cnic = models.CharField(max_length=15, blank=True)
+
+    cnic_front = models.ImageField(
+        upload_to="verification/cnic_front/",
+        blank=True,
+        null=True,
+    )
+
+    cnic_back = models.ImageField(
+        upload_to="verification/cnic_back/",
+        blank=True,
+        null=True,
+    )
+
+    selfie = models.ImageField(
+        upload_to="verification/selfie/",
+        blank=True,
+        null=True,
+    )
+
+    is_verified = models.BooleanField(default=False)
+
+    verification_status = models.CharField(
+        max_length=20,
+        choices=[
+            ("pending", "Pending"),
+            ("approved", "Approved"),
+            ("rejected", "Rejected"),
+        ],
+        default="pending",
+    )
+
     is_available = models.BooleanField(default=True)
 
     def __str__(self):
@@ -77,12 +109,7 @@ class Notification(models.Model):
         return self.message
 
 
-# Review System
-class Review(models.Model):
-    ...
-
-
-    # Review System
+    # Review Model
 class Review(models.Model):
     customer = models.ForeignKey(
         User,

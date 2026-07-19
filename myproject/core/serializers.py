@@ -76,7 +76,7 @@ class BookingSerializer(serializers.ModelSerializer):
         data["booking_date"] = instance.created_at
         
         return data
-    
+    # Review Serializer
 class ReviewSerializer(serializers.ModelSerializer):
     customer_name = serializers.CharField(
         source="customer.username",
@@ -100,4 +100,23 @@ class ReviewSerializer(serializers.ModelSerializer):
             "customer",
             "worker",
             "created_at",
+        ]
+
+# Varification Serializer
+class WorkerVerificationSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = WorkerProfile
+        fields = [
+            "cnic",
+            "cnic_front",
+            "cnic_back",
+            "selfie",
+            "verification_status",
+            "is_verified",
+        ]
+
+        read_only_fields = [
+            "verification_status",
+            "is_verified",
         ]

@@ -4,6 +4,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
+from .serializers import WorkerVerificationSerializer
+from .models import WorkerProfile
 
 from .models import User, Service, WorkerProfile, Booking, Review, Notification
 from .serializers import (
@@ -310,3 +312,27 @@ def notification_count(request):
     return Response({
         "count": count
     })
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def upload_verification(request):
+
+    worker = WorkerProfile.objects.get(user=request.user)
+
+    worker.cnic = request.data.get("cnic")
+
+    if "cnic_front" in request.FILES:
+        worker.cnic_front = request.FILES["cnic_front"]
+
+    if "cnic_back" in request.FILES:
+        worker.cnic_back = request.FILES["cnic_back"]
+
+    if "selfie" in request.FILES:
+        worker.selfie = request.FILES["selfie"]
+
+    worker.verification_status = "pending"
+    worker.save()
+
+    return Response({
+        "message": "Verification uploaded successfully."
+    })
+

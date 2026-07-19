@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Container, Card, Badge } from "react-bootstrap";
+import { Container, Card, Badge, Button } from "react-bootstrap";
 import api from "../utils/api";
 
 function CustomerDashboard() {

@@ -10,6 +10,7 @@ function Login() {
   const [password, setPassword] = useState("");
 
   const handleLogin = async () => {
+    console.log("Login Button Clicked");
     try {
       const response = await fetch(
         "http://127.0.0.1:8000/api/token/",
@@ -24,8 +25,13 @@ function Login() {
           }),
         }
       );
+      console.log("Fetch Completed");
+console.log(response.status);
+      console.log(response.status);
+console.log(response);
 
       const data = await response.json();
+      console.log(data);
 
       if (data.access) {
         // Save Token
@@ -56,9 +62,9 @@ localStorage.setItem("user", JSON.stringify(userData));
         alert("Login Failed");
       }
     } catch (error) {
-      console.log(error);
-      alert("Server Error");
-    }
+  console.error("LOGIN ERROR:", error);
+  alert(error.message);
+}
   };
 
   return (
