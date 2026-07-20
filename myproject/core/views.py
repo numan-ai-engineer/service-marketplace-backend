@@ -6,6 +6,8 @@ from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
 from .serializers import WorkerVerificationSerializer
 from .models import WorkerProfile
+from django.shortcuts import get_object_or_404
+from .ocr import extract_cnic
 
 from .models import User, Service, WorkerProfile, Booking, Review, Notification
 from .serializers import (
@@ -68,11 +70,12 @@ class BookingViewSet(viewsets.ModelViewSet):
         if not service_id:
             raise ValidationError({"service": "Service is required"})
 
-        service_obj = Service.objects.get(id=service_id)
+        service_obj = get_object_or_404( Service, id=service_id )
 
         worker = WorkerProfile.objects.filter(
-            services=service_obj
-        ).first()
+    services=service_obj,
+    is_available=True
+).first()
 
         if not worker:
             raise ValidationError(
@@ -93,11 +96,12 @@ class BookingViewSet(viewsets.ModelViewSet):
 # REVIEW API
 # =========================
 class ReviewViewSet(viewsets.ModelViewSet):
-    queryset = Review.objects.all()
-    serializer_class = ReviewSerializer
 
-    def get_queryset(self):
-        return Review.objects.all()
+    permission_classes = [IsAuthenticated]
+
+    queryset = Review.objects.all()
+
+    serializer_class = ReviewSerializer
 
     def get_object(self):
         review = super().get_object()
@@ -108,30 +112,33 @@ class ReviewViewSet(viewsets.ModelViewSet):
             )
 
         return review
+def perform_create(self, serializer):
+    booking_id = self.request.data.get("booking")
 
-    def perform_create(self, serializer):
-        booking_id = self.request.data.get("booking")
+    booking = get_object_or_404(
+        Booking,
+        id=booking_id
+    )
 
-        booking = Booking.objects.get(id=booking_id)
+    worker_profile = get_object_or_404(
+        WorkerProfile,
+        user=booking.worker
+    )
 
-        worker_profile = WorkerProfile.objects.get(
-            user=booking.worker
-        )
+    serializer.save(
+        customer=self.request.user,
+        worker=worker_profile,
+        booking=booking,
+    )
 
-        serializer.save(
-            customer=self.request.user,
-            worker=worker_profile,
-            booking=booking,
-        )
+    average_rating = Review.objects.filter(
+        worker=worker_profile
+    ).aggregate(
+        Avg("rating")
+    )
 
-        average_rating = Review.objects.filter(
-            worker=worker_profile
-        ).aggregate(
-            Avg("rating")
-        )
-
-        worker_profile.rating = average_rating["rating__avg"] or 0
-        worker_profile.save()
+    worker_profile.rating = average_rating["rating__avg"] or 0
+    worker_profile.save()
 
     def perform_update(self, serializer):
         review = serializer.save()
@@ -316,6 +323,8 @@ def notification_count(request):
 @permission_classes([IsAuthenticated])
 def upload_verification(request):
 
+    print("UPLOAD API CALLED")
+
     worker = WorkerProfile.objects.get(user=request.user)
 
     worker.cnic = request.data.get("cnic")
@@ -328,6 +337,31 @@ def upload_verification(request):
 
     if "selfie" in request.FILES:
         worker.selfie = request.FILES["selfie"]
+
+    # پہلے تصاویر Save کریں
+    worker.save()
+
+    # OCR سے CNIC نمبر پڑھیں
+    scanned_cnic = extract_cnic(worker.cnic_front.path)
+
+    print("Typed CNIC:", worker.cnic)
+    print("Scanned CNIC:", scanned_cnic)
+
+    if scanned_cnic is None:
+        return Response(
+            {
+                "error": "CNIC Number could not be detected from image."
+            },
+            status=400,
+        )
+
+    if worker.cnic != scanned_cnic:
+        return Response(
+            {
+                "error": "CNIC Number does not match the uploaded card."
+            },
+            status=400,
+        )
 
     worker.verification_status = "pending"
     worker.save()
