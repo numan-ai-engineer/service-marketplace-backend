@@ -388,12 +388,21 @@ def pending_workers(request):
 
     for worker in workers:
 
-        data.append({
-            "id": worker.id,
-            "name": worker.user.username,
-            "cnic": worker.cnic,
-            "status": worker.verification_status,
-        })
+      data.append({
+    "id": worker.id,
+    "name": worker.user.username,
+    "cnic": worker.cnic,
+    "status": worker.verification_status,
+
+    "cnic_front": request.build_absolute_uri(worker.cnic_front.url)
+    if worker.cnic_front else None,
+
+    "cnic_back": request.build_absolute_uri(worker.cnic_back.url)
+    if worker.cnic_back else None,
+
+    "selfie": request.build_absolute_uri(worker.selfie.url)
+    if worker.selfie else None,
+})
 
     return Response(data)
 

@@ -13,6 +13,7 @@ import BookingDetails from "./pages/BookingDetails";
 import WorkerProfile from "./pages/WorkerProfile";
 import CustomerDashboard from "./pages/CustomerDashboard";
 import Notifications from "./pages/Notifications";
+import AdminDashboard from "./pages/AdminDashboard";
 
 function App() {
   return (
@@ -31,6 +32,8 @@ function App() {
        <Route path="/worker/:id" element={<WorkerProfile />} />
        <Route path="/customer-dashboard" element={<CustomerDashboard />} />
        <Route path="/notifications" element={<Notifications />} />
+       <Route path="/admin-dashboard" element={<AdminDashboard />} />
+
 
       </Routes>
     </>
