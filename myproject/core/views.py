@@ -396,3 +396,40 @@ def pending_workers(request):
         })
 
     return Response(data)
+
+@api_view(["PATCH"])
+@permission_classes([IsAuthenticated])
+def verify_worker(request, pk):
+
+    if not request.user.is_staff:
+        return Response(
+            {"error": "Admin only"},
+            status=403,
+        )
+
+    worker = get_object_or_404(
+        WorkerProfile,
+        id=pk
+    )
+
+    action = request.data.get("action")
+
+    if action == "approve":
+        worker.verification_status = "approved"
+        worker.is_verified = True
+
+    elif action == "reject":
+        worker.verification_status = "rejected"
+        worker.is_verified = False
+
+    else:
+        return Response(
+            {"error": "Invalid action"},
+            status=400,
+        )
+
+    worker.save()
+
+    return Response({
+        "message": f"Worker {action}d successfully."
+    })

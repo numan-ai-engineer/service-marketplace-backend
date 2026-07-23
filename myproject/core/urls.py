@@ -15,6 +15,7 @@ from .views import (
     notification_count,
     upload_verification,
     pending_workers,
+    verify_worker,
 )
 
 from .api import register_user, current_user
@@ -58,6 +59,12 @@ urlpatterns = [
         "admin/pending-workers/",
         pending_workers,
     ),
+
+    # Verify Worker
+    path(
+    "admin/verify-worker/<int:pk>/",
+    verify_worker,
+),
 
     # Router
     path("", include(router.urls)),
