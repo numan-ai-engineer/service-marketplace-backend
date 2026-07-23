@@ -370,3 +370,29 @@ def upload_verification(request):
         "message": "Verification uploaded successfully."
     })
 
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def pending_workers(request):
+
+    if not request.user.is_staff:
+        return Response(
+            {"error": "Admin only"},
+            status=403
+        )
+
+    workers = WorkerProfile.objects.filter(
+        verification_status="pending"
+    )
+
+    data = []
+
+    for worker in workers:
+
+        data.append({
+            "id": worker.id,
+            "name": worker.user.username,
+            "cnic": worker.cnic,
+            "status": worker.verification_status,
+        })
+
+    return Response(data)

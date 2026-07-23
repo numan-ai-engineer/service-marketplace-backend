@@ -14,6 +14,7 @@ from .views import (
     notifications,
     notification_count,
     upload_verification,
+    pending_workers,
 )
 
 from .api import register_user, current_user
@@ -46,11 +47,18 @@ urlpatterns = [
     path("notifications/", notifications),
     path("notifications/count/", notification_count),
 
-    # Routes
-    path("", include(router.urls)),
-
+    # Upload Verification
     path(
-    "worker/upload-verification/",
-    upload_verification,
-),
+        "worker/upload-verification/",
+        upload_verification,
+    ),
+
+    # Pending Workers
+    path(
+        "admin/pending-workers/",
+        pending_workers,
+    ),
+
+    # Router
+    path("", include(router.urls)),
 ]
