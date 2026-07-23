@@ -16,6 +16,8 @@ from .views import (
     upload_verification,
     pending_workers,
     verify_worker,
+    worker_profile,
+    admin_dashboard,
 )
 
 from .api import register_user, current_user
@@ -60,11 +62,24 @@ urlpatterns = [
         pending_workers,
     ),
 
+    # Admin Dashboard
+    path(
+    "admin/dashboard/",
+    admin_dashboard,
+),
+
     # Verify Worker
     path(
     "admin/verify-worker/<int:pk>/",
     verify_worker,
 ),
+
+# Worker Profile
+   path(
+    "worker/profile/<int:pk>/",
+    worker_profile,
+),
+
 
     # Router
     path("", include(router.urls)),

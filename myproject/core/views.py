@@ -393,6 +393,16 @@ def pending_workers(request):
     "name": worker.user.username,
     "cnic": worker.cnic,
     "status": worker.verification_status,
+    "city": worker.city,
+
+"experience": worker.experience_years,
+
+"rating": worker.rating,
+
+"services": [
+    service.name
+    for service in worker.services.all()
+],
 
     "cnic_front": request.build_absolute_uri(worker.cnic_front.url)
     if worker.cnic_front else None,
@@ -405,6 +415,31 @@ def pending_workers(request):
 })
 
     return Response(data)
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def admin_dashboard(request):
+
+    if not request.user.is_staff:
+        return Response(
+            {"error": "Admin only"},
+            status=403,
+        )
+
+    workers = WorkerProfile.objects.all()
+
+    return Response({
+        "total_workers": workers.count(),
+        "pending": workers.filter(
+            verification_status="pending"
+        ).count(),
+        "approved": workers.filter(
+            verification_status="approved"
+        ).count(),
+        "rejected": workers.filter(
+            verification_status="rejected"
+        ).count(),
+    })
 
 @api_view(["PATCH"])
 @permission_classes([IsAuthenticated])
@@ -441,4 +476,40 @@ def verify_worker(request, pk):
 
     return Response({
         "message": f"Worker {action}d successfully."
+    })
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def worker_profile(request, pk):
+
+    worker = get_object_or_404(
+        WorkerProfile,
+        id=pk
+    )
+
+    return Response({
+
+        "name": worker.user.username,
+
+        "city": worker.city,
+
+        "experience": worker.experience_years,
+
+        "rating": worker.rating,
+
+        "verified": worker.is_verified,
+
+        "services": [
+            service.name
+            for service in worker.services.all()
+        ],
+
+        "cnic_front": request.build_absolute_uri(worker.cnic_front.url)
+        if worker.cnic_front else None,
+
+        "cnic_back": request.build_absolute_uri(worker.cnic_back.url)
+        if worker.cnic_back else None,
+
+        "selfie": request.build_absolute_uri(worker.selfie.url)
+        if worker.selfie else None,
     })

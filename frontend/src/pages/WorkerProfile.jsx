@@ -27,6 +27,10 @@ function WorkerProfile() {
 
 const [isEditing, setIsEditing] = useState(false);
 
+const user = JSON.parse(localStorage.getItem("user"));
+
+const isAdmin = user?.role === "admin";
+
 console.log("isEditing =", isEditing);
 
   useEffect(() => {
@@ -218,45 +222,46 @@ return (
           </Badge>
         ))}
       </div>
+<hr className="my-4" />
 
-      <hr className="my-4" />
+{!isAdmin && (
+  <>
+    <h4>Write a Review</h4>
 
-      <h4>Write a Review</h4>
+    <Form className="mt-3" onSubmit={submitReview}>
+      <Form.Group className="mb-3">
+        <Form.Label>Rating</Form.Label>
 
-      <Form className="mt-3" onSubmit={submitReview}>
-        <Form.Group className="mb-3">
-          <Form.Label>Rating</Form.Label>
+        <Form.Select
+          value={rating}
+          onChange={(e) => setRating(e.target.value)}
+        >
+          <option value="5">⭐⭐⭐⭐⭐ (5)</option>
+          <option value="4">⭐⭐⭐⭐ (4)</option>
+          <option value="3">⭐⭐⭐ (3)</option>
+          <option value="2">⭐⭐ (2)</option>
+          <option value="1">⭐ (1)</option>
+        </Form.Select>
+      </Form.Group>
 
-          <Form.Select
-            value={rating}
-            onChange={(e) => setRating(e.target.value)}
-          >
-            <option value="5">⭐⭐⭐⭐⭐ (5)</option>
-            <option value="4">⭐⭐⭐⭐ (4)</option>
-            <option value="3">⭐⭐⭐ (3)</option>
-            <option value="2">⭐⭐ (2)</option>
-            <option value="1">⭐ (1)</option>
-          </Form.Select>
-        </Form.Group>
+      <Form.Group className="mb-3">
+        <Form.Label>Comment</Form.Label>
 
-        <Form.Group className="mb-3">
-          <Form.Label>Comment</Form.Label>
+        <Form.Control
+          as="textarea"
+          rows={4}
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+          placeholder="Write your review..."
+        />
+      </Form.Group>
 
-          <Form.Control
-            as="textarea"
-            rows={4}
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            placeholder="Write your review..."
-          />
-        </Form.Group>
-
-        <Button variant="primary" type="submit">
-  {isEditing ? "Update Review" : "Submit Review"}
-</Button>
-      </Form>
- 
-
+      <Button variant="primary" type="submit">
+        {isEditing ? "Update Review" : "Submit Review"}
+      </Button>
+    </Form>
+  </>
+)}
       <hr className="my-4" />
 
       <h4>Customer Reviews</h4>
@@ -273,35 +278,41 @@ return (
             <small>
               By: <strong>{review.customer_name}</strong>
             </small>
-            <div className="mt-2">
-  <Button
-  variant="warning"
-  size="sm"
-  onClick={() => {
-    console.log("Edit Button Clicked", review.id);
+            
+    {!isAdmin && (
+  <div className="mt-2">
 
-    setIsEditing(true);
-    setEditingReviewId(review.id);
-    setRating(review.rating);
-    setComment(review.comment);
-    window.scrollTo({
-  top: 0,
-  behavior: "smooth",
-});
-  }}
->
-  Edit
-</Button>
+    <Button
+      variant="warning"
+      size="sm"
+      onClick={() => {
+        console.log("Edit Button Clicked", review.id);
 
-  <Button
-    variant="danger"
-    size="sm"
-    className="ms-2"
-    onClick={() => deleteReview(review.id)}
-  >
-    Delete
-  </Button>
-</div>
+        setIsEditing(true);
+        setEditingReviewId(review.id);
+        setRating(review.rating);
+        setComment(review.comment);
+
+        window.scrollTo({
+          top: 0,
+          behavior: "smooth",
+        });
+      }}
+    >
+      Edit
+    </Button>
+
+    <Button
+      variant="danger"
+      size="sm"
+      className="ms-2"
+      onClick={() => deleteReview(review.id)}
+    >
+      Delete
+    </Button>
+
+  </div>
+)}
 
           </Card>
         ))
