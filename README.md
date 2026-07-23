@@ -44,3 +44,11 @@ This is a full-stack backend API for a Service Booking System where customers ca
 pip install -r requirements.txt
 python manage.py runserver
 
+## ✅ AI Worker Verification
+
+✔ EasyOCR Integration
+✔ Automatic CNIC Number Detection
+✔ CNIC Validation
+✔ Worker Document Upload
+✔ Verification Workflow
+
