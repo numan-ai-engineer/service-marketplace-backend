@@ -33,6 +33,9 @@ const isAdmin = user?.role === "admin";
 
 console.log("isEditing =", isEditing);
 
+console.log("Current User:", user);
+console.log("isAdmin:", isAdmin);
+
   useEffect(() => {
     loadWorker();
   }, [id]);

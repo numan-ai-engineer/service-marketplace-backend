@@ -94,67 +94,127 @@ function AdminDashboard() {
     <div style={{ padding: "20px" }}>
       <h2>Admin Dashboard</h2>
 
-      {stats && (
+{stats && (
+
+<div
+    style={{
+        display: "flex",
+        gap: "20px",
+        marginTop: "20px",
+        marginBottom: "20px",
+        flexWrap: "wrap",
+    }}
+>
 
     <div
         style={{
-            display: "flex",
-            gap: "20px",
-            marginTop: "20px",
-            marginBottom: "20px",
-            flexWrap: "wrap",
+            border: "1px solid blue",
+            padding: "20px",
+            borderRadius: "10px",
+            width: "180px",
         }}
     >
-
-        <div
-            style={{
-                border: "1px solid gray",
-                padding: "20px",
-                borderRadius: "10px",
-                width: "180px",
-            }}
-        >
-            <h3>👷 Total Workers</h3>
-            <h2>{stats.total_workers}</h2>
-        </div>
-
-        <div
-            style={{
-                border: "1px solid orange",
-                padding: "20px",
-                borderRadius: "10px",
-                width: "180px",
-            }}
-        >
-            <h3>🟡 Pending</h3>
-            <h2>{stats.pending}</h2>
-        </div>
-
-        <div
-            style={{
-                border: "1px solid green",
-                padding: "20px",
-                borderRadius: "10px",
-                width: "180px",
-            }}
-        >
-            <h3>🟢 Approved</h3>
-            <h2>{stats.approved}</h2>
-        </div>
-
-        <div
-            style={{
-                border: "1px solid red",
-                padding: "20px",
-                borderRadius: "10px",
-                width: "180px",
-            }}
-        >
-            <h3>🔴 Rejected</h3>
-            <h2>{stats.rejected}</h2>
-        </div>
-
+        <h3>👥 Total Users</h3>
+        <h2>{stats.total_users}</h2>
     </div>
+
+    <div
+        style={{
+            border: "1px solid purple",
+            padding: "20px",
+            borderRadius: "10px",
+            width: "180px",
+        }}
+    >
+        <h3>🙍 Customers</h3>
+        <h2>{stats.total_customers}</h2>
+    </div>
+
+    <div
+        style={{
+            border: "1px solid gray",
+            padding: "20px",
+            borderRadius: "10px",
+            width: "180px",
+        }}
+    >
+        <h3>👷 Total Workers</h3>
+        <h2>{stats.total_workers}</h2>
+    </div>
+
+    <div
+        style={{
+            border: "1px solid orange",
+            padding: "20px",
+            borderRadius: "10px",
+            width: "180px",
+        }}
+    >
+        <h3>🟡 Pending</h3>
+        <h2>{stats.pending}</h2>
+    </div>
+
+    <div
+        style={{
+            border: "1px solid green",
+            padding: "20px",
+            borderRadius: "10px",
+            width: "180px",
+        }}
+    >
+        <h3>🟢 Approved</h3>
+        <h2>{stats.approved}</h2>
+    </div>
+
+    <div
+        style={{
+            border: "1px solid red",
+            padding: "20px",
+            borderRadius: "10px",
+            width: "180px",
+        }}
+    >
+        <h3>🔴 Rejected</h3>
+        <h2>{stats.rejected}</h2>
+    </div>
+
+    <div
+        style={{
+            border: "1px solid black",
+            padding: "20px",
+            borderRadius: "10px",
+            width: "180px",
+        }}
+    >
+        <h3>📅 Bookings</h3>
+        <h2>{stats.total_bookings}</h2>
+    </div>
+
+    <div
+        style={{
+            border: "1px solid darkgreen",
+            padding: "20px",
+            borderRadius: "10px",
+            width: "180px",
+        }}
+    >
+        <h3>✅ Completed</h3>
+        <h2>{stats.completed_bookings}</h2>
+    </div>
+
+    <div
+        style={{
+            border: "1px solid brown",
+            padding: "20px",
+            borderRadius: "10px",
+            width: "180px",
+        }}
+    >
+        <h3>⭐ Reviews</h3>
+        <h2>{stats.total_reviews}</h2>
+    </div>
+
+</div>
 
 )}
 

@@ -5,18 +5,12 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
 from .serializers import WorkerVerificationSerializer
-from .models import WorkerProfile
 from django.shortcuts import get_object_or_404
 from .ocr import extract_cnic
 
 from .models import User, Service, WorkerProfile, Booking, Review, Notification
-from .serializers import (
-    UserSerializer,
-    ServiceSerializer,
-    WorkerProfileSerializer,
-    BookingSerializer,
-    ReviewSerializer,
-)
+from .serializers import ( UserSerializer, ServiceSerializer, WorkerProfileSerializer, BookingSerializer, 
+ReviewSerializer, )
 
 # =========================
 # USER API
@@ -40,20 +34,28 @@ class ServiceViewSet(viewsets.ModelViewSet):
 class WorkerProfileViewSet(viewsets.ModelViewSet):
     queryset = WorkerProfile.objects.all()
     serializer_class = WorkerProfileSerializer
+    
+def get_queryset(self):
 
-    def get_queryset(self):
-        queryset = WorkerProfile.objects.all()
+    queryset = WorkerProfile.objects.filter(
+        is_verified=True
+    )
 
-        city = self.request.query_params.get('city')
-        service = self.request.query_params.get('service')
+    city = self.request.query_params.get("city")
 
-        if city:
-            queryset = queryset.filter(city__icontains=city)
+    service = self.request.query_params.get("service")
 
-        if service:
-            queryset = queryset.filter(services__name__icontains=service)
+    if city:
+        queryset = queryset.filter(
+            city__icontains=city
+        )
 
-        return queryset
+    if service:
+        queryset = queryset.filter(
+            services__name__icontains=service
+        )
+
+    return queryset
 
 
 # =========================
@@ -427,19 +429,43 @@ def admin_dashboard(request):
         )
 
     workers = WorkerProfile.objects.all()
-
     return Response({
-        "total_workers": workers.count(),
-        "pending": workers.filter(
-            verification_status="pending"
-        ).count(),
-        "approved": workers.filter(
-            verification_status="approved"
-        ).count(),
-        "rejected": workers.filter(
-            verification_status="rejected"
-        ).count(),
-    })
+
+    "total_users": User.objects.count(),
+
+    "total_customers": User.objects.filter(
+        role="customer"
+    ).count(),
+
+    "total_workers": User.objects.filter(
+        role="worker"
+    ).count(),
+
+    "pending": workers.filter(
+        verification_status="pending"
+    ).count(),
+
+    "approved": workers.filter(
+        verification_status="approved"
+    ).count(),
+
+    "rejected": workers.filter(
+        verification_status="rejected"
+    ).count(),
+
+    "total_bookings": Booking.objects.count(),
+
+    "completed_bookings": Booking.objects.filter(
+        status="completed"
+    ).count(),
+
+    "cancelled_bookings": Booking.objects.filter(
+        status="cancelled"
+    ).count(),
+
+    "total_reviews": Review.objects.count(),
+
+})
 
 @api_view(["PATCH"])
 @permission_classes([IsAuthenticated])
