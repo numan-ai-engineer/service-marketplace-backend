@@ -20,7 +20,8 @@ from .views import (
     admin_dashboard,
 )
 
-from .api import register_user, current_user
+from .views import register
+from .api import current_user
 
 # Router setup
 router = DefaultRouter()
@@ -36,7 +37,7 @@ urlpatterns = [
     path("bookings/<int:pk>/status/", update_booking_status),
 
     # Auth
-    path("register/", register_user),
+    path("register/", register),
     path("me/", current_user),
 
     # Protected
@@ -82,5 +83,5 @@ urlpatterns = [
 
 
     # Router
-    path("", include(router.urls)),
+    path("", include(router.urls))
 ]

@@ -14,6 +14,7 @@ import WorkerProfile from "./pages/WorkerProfile";
 import CustomerDashboard from "./pages/CustomerDashboard";
 import Notifications from "./pages/Notifications";
 import AdminDashboard from "./pages/AdminDashboard";
+import Register from "./components/Register";
 
 function App() {
   return (
@@ -33,6 +34,7 @@ function App() {
        <Route path="/customer-dashboard" element={<CustomerDashboard />} />
        <Route path="/notifications" element={<Notifications />} />
        <Route path="/admin-dashboard" element={<AdminDashboard />} />
+       <Route path="/register" element={<Register />} />
 
 
       </Routes>

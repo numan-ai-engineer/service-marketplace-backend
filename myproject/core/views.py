@@ -7,6 +7,7 @@ from rest_framework.exceptions import ValidationError
 from .serializers import WorkerVerificationSerializer
 from django.shortcuts import get_object_or_404
 from .ocr import extract_cnic
+from django.contrib.auth import get_user_model
 
 from .models import User, Service, WorkerProfile, Booking, Review, Notification
 from .serializers import ( UserSerializer, ServiceSerializer, WorkerProfileSerializer, BookingSerializer, 
@@ -539,3 +540,50 @@ def worker_profile(request, pk):
         "selfie": request.build_absolute_uri(worker.selfie.url)
         if worker.selfie else None,
     })
+
+# Register
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+
+@api_view(["POST"])
+def register(request):
+    username = request.data.get("username")
+    email = request.data.get("email")
+    password = request.data.get("password")
+    phone = request.data.get("phone")
+    role = request.data.get("role", "customer")
+    first_name = request.data.get("first_name", "")
+
+    if User.objects.filter(username=username).exists():
+        return Response(
+            {"error": "Username already exists"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if User.objects.filter(email=email).exists():
+        return Response(
+            {"error": "Email already exists"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if User.objects.filter(phone=phone).exists():
+        return Response(
+            {"error": "Phone already exists"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    user = User.objects.create_user(
+        username=username,
+        email=email,
+        password=password,
+        phone=phone,
+        role=role,
+        first_name=first_name,
+    )
+
+    return Response(
+        {"message": "Account Created Successfully"},
+        status=status.HTTP_201_CREATED,
+    )

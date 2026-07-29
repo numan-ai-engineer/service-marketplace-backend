@@ -78,60 +78,122 @@ const getBadgeColor = (status) => {
   return (
     <Container className="mt-5">
 
-      <h2 className="mb-4">
-        Welcome {dashboard.customer}
-      </h2>
+      <div className="text-center mb-5">
+    <h1 className="fw-bold">
+        👋 Welcome Back
+    </h1>
 
-      <div className="mb-4">
+    <h3 className="text-primary">
+        {dashboard.customer}
+    </h3>
 
-  <h4>Total Bookings: {dashboard.total_bookings}</h4>
-
-  <p>🟡 Pending: {dashboard.pending}</p>
-
-  <p>🟢 Accepted: {dashboard.accepted}</p>
-
-  <p>🔵 Completed: {dashboard.completed}</p>
-
-  <p>🔴 Cancelled: {dashboard.cancelled}</p>
-
-  <p>⚫ Rejected: {dashboard.rejected}</p>
-
+    <p className="text-muted">
+        Manage all your bookings from one place.
+    </p>
 </div>
 
-      <hr />
 
-      {dashboard.bookings.map((booking) => (
-        <Card
-          key={booking.id}
-          className="shadow p-3 mb-3"
-        >
-          <h4>{booking.service.name}</h4>
+ <div className="row g-4 mb-5">
 
-          <p>
-            Worker: {booking.worker.name}
-          </p>
+  <div className="col-md-4">
+    <Card className="shadow border-0 text-center p-3">
+      <h5>📅 Total Bookings</h5>
+      <h2 className="text-primary">{dashboard.total_bookings}</h2>
+    </Card>
+  </div>
 
-          <p>
-            Status:
-            {" "}
-           <Badge bg={getBadgeColor(booking.status)}>
-  {booking.status}
-</Badge>
-          </p>
+  <div className="col-md-4">
+    <Card className="shadow border-0 text-center p-3">
+      <h5>🟡 Pending</h5>
+      <h2 className="text-warning">{dashboard.pending}</h2>
+    </Card>
+  </div>
 
-          <p>
-            Date: {booking.booking_date}
-          </p>
-          {booking.status === "pending" && (
-  <Button
-  variant="danger"
-  onClick={() => cancelBooking(booking.id)}
+  <div className="col-md-4">
+    <Card className="shadow border-0 text-center p-3">
+      <h5>🟢 Accepted</h5>
+      <h2 className="text-success">{dashboard.accepted}</h2>
+    </Card>
+  </div>
+
+  <div className="col-md-4">
+    <Card className="shadow border-0 text-center p-3">
+      <h5>🔵 Completed</h5>
+      <h2 className="text-info">{dashboard.completed}</h2>
+    </Card>
+  </div>
+
+  <div className="col-md-4">
+    <Card className="shadow border-0 text-center p-3">
+      <h5>🔴 Cancelled</h5>
+      <h2 className="text-danger">{dashboard.cancelled}</h2>
+    </Card>
+  </div>
+
+  <div className="col-md-4">
+    <Card className="shadow border-0 text-center p-3">
+      <h5>⚫ Rejected</h5>
+      <h2 className="text-dark">{dashboard.rejected}</h2>
+    </Card>
+  </div>
+
+</div>
+<hr className="mb-4" />
+
+<h2 className="fw-bold mb-4">
+    📋 My Bookings
+</h2>
+
+{dashboard.bookings.map((booking) => (
+
+<Card
+    key={booking.id}
+    className="shadow-lg border-0 rounded-4 p-4 mb-4"
+style={{
+    transition: "0.3s",
+    cursor: "pointer",
+}}
 >
-  Cancel Booking
-</Button>
-)}
-        </Card>
-      ))}
+
+    <h4 className="fw-bold text-primary mb-3">
+        🔧 {booking.service.name}
+    </h4>
+
+    <p className="mb-2">
+        <strong>👷 Worker:</strong>{" "}
+        {booking.worker.name}
+    </p>
+
+    <p className="mb-2">
+        <strong>📅 Date:</strong>{" "}
+       {new Date(booking.booking_date).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+})}
+    </p>
+
+    <p className="mb-3">
+        <strong>📌 Status:</strong>{" "}
+        <Badge bg={getBadgeColor(booking.status)}>
+            {booking.status}
+        </Badge>
+    </p>
+
+    {booking.status === "pending" && (
+
+        <Button
+            variant="danger"
+            onClick={() => cancelBooking(booking.id)}
+        >
+            ❌ Cancel Booking
+        </Button>
+
+    )}
+
+</Card>
+
+))}
 
     </Container>
   );
