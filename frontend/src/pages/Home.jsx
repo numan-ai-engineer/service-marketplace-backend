@@ -12,8 +12,15 @@ function Home() {
   const [availableOnly, setAvailableOnly] = useState(false);
   const [minimumRating, setMinimumRating] = useState("");
   const [sortBy, setSortBy] = useState("");
-  useEffect(() => {
-  loadServices();
+const loadServices = async () => {
+  const response = await api.get("/services/");
+
+  console.log(response);
+  if (response.ok) {
+    setServices(response.data);
+  }
+};
+
 const loadWorkers = async () => {
   const response = await api.get("/workers/");
 
@@ -28,51 +35,101 @@ const loadWorkers = async () => {
     setWorkers(response.data);
   }
 };
+
+useEffect(() => {
+  loadServices();
   loadWorkers();
 }, []);
 
-const loadServices = async () => {
-  const response = await api.get("/services/");
-
-  console.log(response);
-
-  if (response.ok) {
-    setServices(response.data);
-  }
-};
-
-  return (
+return (
     <>
-      {/* Hero Section */}
-      <div
-        className="py-5 text-white"
-        style={{
-          background: "linear-gradient(135deg, #0d6efd, #0a58ca)",
-        }}
-      >
-        <Container className="text-center">
-          <h1 className="display-3 fw-bold">
-            Service Marketplace
-          </h1>
+      {/* HERO SECTION */}
 
-          <p className="lead mt-4">
-            Find Trusted Workers Near You
-          </p>
+<section
+  className="position-relative overflow-hidden"
+  style={{
+    background:
+      "linear-gradient(135deg,#0f172a,#1d4ed8,#312e81)",
+    minHeight: "90vh",
+  }}
+>
+  <Container>
 
-          <p className="mb-4">
-            Book Electricians, Plumbers, Drivers, Painters
-            and many more professional services.
-          </p>
+    <Row className="align-items-center py-5">
+
+      <Col lg={6}>
+
+        <Badge
+          bg="light"
+          text="primary"
+          className="mb-4 px-3 py-2"
+        >
+          🇵🇰 Pakistan's Smart Service Marketplace
+        </Badge>
+
+        <h1
+          className="fw-bold text-white"
+          style={{
+            fontSize: "60px",
+            lineHeight: "1.2",
+          }}
+        >
+          Find Trusted
+          <br />
+          Workers Near You
+        </h1>
+
+        <p
+          className="text-white-50 mt-4"
+          style={{
+            fontSize: "20px",
+          }}
+        >
+          Electrician, AC Repair,
+          Plumber, Solar Installer,
+          Driver, Painter and hundreds
+          of verified professionals.
+        </p>
+
+        <div className="mt-5 d-flex gap-3">
 
           <Button
-            variant="light"
             size="lg"
+            variant="light"
             onClick={() => navigate("/services")}
           >
             Find Services
           </Button>
-        </Container>
-      </div>
+
+          <Button
+            size="lg"
+            variant="outline-light"
+            onClick={() => navigate("/register")}
+          >
+            Become Worker
+          </Button>
+
+        </div>
+
+      </Col>
+
+      <Col
+        lg={6}
+        className="text-center"
+      >
+
+        <img
+          src="https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?w=700"
+          alt="worker"
+          className="img-fluid rounded-5 shadow-lg"
+        />
+
+      </Col>
+
+    </Row>
+
+  </Container>
+</section>
 
       {/* Popular Services */}
       <Container className="my-5">
@@ -81,24 +138,61 @@ const loadServices = async () => {
           Popular Services
         </h2>
 
-        <Row>
+        <Row className="g-4">
   {services.map((service) => (
-    <Col md={3} className="mb-4" key={service.id}>
-      <Card className="shadow h-100 text-center p-3">
+    <Col lg={3} md={6} key={service.id}>
+     <Card
+  className="border-0 shadow-lg rounded-4 h-100 overflow-hidden"
+  style={{
+    transition: "all 0.35s ease",
+    cursor: "pointer",
+  }}
+  onMouseEnter={(e) => {
+    e.currentTarget.style.transform = "translateY(-10px)";
+    e.currentTarget.style.boxShadow =
+      "0 20px 50px rgba(37,99,235,.25)";
+  }}
+  onMouseLeave={(e) => {
+    e.currentTarget.style.transform = "translateY(0px)";
+    e.currentTarget.style.boxShadow =
+      "0 10px 25px rgba(0,0,0,.15)";
+  }}
+>
+        <Card.Body className="text-center p-4">
 
-        <h1>🛠️</h1>
+          <div
+            className="mx-auto mb-4"
+            style={{
+              width: "80px",
+              height: "80px",
+              borderRadius: "20px",
+              background:
+                "linear-gradient(135deg,#2563eb,#7c3aed)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "40px",
+            }}
+          >
+            🛠️
+          </div>
 
-        <h4>{service.name}</h4>
+          <h4 className="fw-bold">
+            {service.name}
+          </h4>
 
-        <p>{service.description}</p>
+          <p className="text-muted">
+            {service.description}
+          </p>
 
-        <Button
-          variant="primary"
-          onClick={() => navigate(`/services/${service.id}`)}
-        >
-          View Details
-        </Button>
+          <Button
+            className="rounded-pill mt-3"
+            onClick={() => navigate(`/services/${service.id}`)}
+          >
+            View Service
+          </Button>
 
+        </Card.Body>
       </Card>
     </Col>
   ))}
@@ -282,37 +376,73 @@ const loadServices = async () => {
   })
   .map((worker) => (
       <Col md={4} className="mb-4" key={worker.id}>
-        <Card className="shadow h-100 text-center p-3">
-          <h1>👷</h1>
+   <Card
+  className="border-0 shadow-lg rounded-4 h-100 overflow-hidden"
+  style={{
+    transition: "all 0.35s ease",
+    cursor: "pointer",
+  }}
+  onMouseEnter={(e) => {
+    e.currentTarget.style.transform = "translateY(-10px)";
+    e.currentTarget.style.boxShadow =
+      "0 20px 50px rgba(37,99,235,.25)";
+  }}
+  onMouseLeave={(e) => {
+    e.currentTarget.style.transform = "translateY(0px)";
+    e.currentTarget.style.boxShadow =
+      "0 10px 25px rgba(0,0,0,.15)";
+  }}
+>
+  <Card.Body className="text-center">
 
-          <h4>{worker.user.name}</h4>
+    <img
+      src="https://i.pravatar.cc/200?img=12"
+      alt="worker"
+      className="rounded-circle mb-3"
+      style={{
+        width: "100px",
+        height: "100px",
+        objectFit: "cover",
+      }}
+    />
 
-          <p>📍 {worker.city}</p>
+    <h4 className="fw-bold">
+      {worker.user.name}
+    </h4>
 
-          <p>⭐ {worker.rating}</p>
+    <p className="text-muted">
+      📍 {worker.city}
+    </p>
 
-          <p>Experience: {worker.experience_years} Years</p>
+    <Badge bg="success" className="mb-2">
+      ⭐ {worker.rating}
+    </Badge>
 
-          <p>Services:</p>
+    <p className="text-muted">
+      Experience: {worker.experience_years} Years
+    </p>
 
-          {worker.services.map((service, index) => (
-            <Badge
-              bg="primary"
-              className="me-2"
-              key={index}
-            >
-              {service}
-            </Badge>
-          ))}
+    <div className="mb-3">
+      {worker.services.map((service, index) => (
+        <Badge
+          bg="primary"
+          className="me-2 mb-2"
+          key={index}
+        >
+          {service}
+        </Badge>
+      ))}
+    </div>
 
-          <Button
-            variant="outline-primary"
-            className="mt-3"
-            onClick={() => navigate(`/worker/${worker.id}`)}
-          >
-            View Profile
-          </Button>
-        </Card>
+    <Button
+      className="rounded-pill"
+      onClick={() => navigate(`/worker/${worker.id}`)}
+    >
+      View Profile
+    </Button>
+
+  </Card.Body>
+</Card>
       </Col>
     ))}
 </Row>

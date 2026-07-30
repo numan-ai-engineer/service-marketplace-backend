@@ -2,6 +2,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import permission_classes, api_view
 from rest_framework.response import Response
 from rest_framework import status
+from django.contrib.auth import authenticate
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import User
 from .serializers import UserSerializer
@@ -70,4 +72,33 @@ def current_user(request):
         "username": request.user.username,
         "phone": request.user.phone,
         "role": role,
+    })
+
+@api_view(["POST"])
+def login_user(request):
+
+    username = request.data.get("username")
+    password = request.data.get("password")
+
+    user = authenticate(
+        username=username,
+        password=password,
+    )
+
+    if user is None:
+        return Response(
+            {"error": "Invalid Username or Password"},
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
+
+    refresh = RefreshToken.for_user(user)
+
+    return Response({
+        "access": str(refresh.access_token),
+        "refresh": str(refresh),
+        "user": {
+            "id": user.id,
+            "username": user.username,
+            "role": "admin" if user.is_staff else user.role,
+        }
     })

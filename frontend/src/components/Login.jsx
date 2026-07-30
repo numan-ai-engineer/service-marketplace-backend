@@ -79,7 +79,21 @@ localStorage.setItem("user", JSON.stringify(userData));
 
       toast.success("Login Successful 🎉");
 
-        navigate("/services");
+// Redirect according to role
+
+if (userData.role === "admin") {
+
+  navigate("/admin-dashboard");
+
+} else if (userData.role === "worker") {
+
+  navigate("/worker-dashboard");
+
+} else {
+
+  navigate("/customer-dashboard");
+
+}
       } else {
         toast.error("Invalid Username or Password");
       }
@@ -311,11 +325,12 @@ modern digital experience.
     </label>
 
     <button
-      type="button"
-      className="text-blue-600 hover:text-indigo-700 text-sm font-semibold"
-    >
-      Forgot Password?
-    </button>
+  type="button"
+  onClick={() => navigate("/forgot-password")}
+  className="text-blue-600 hover:text-indigo-700 text-sm font-semibold"
+>
+  Forgot Password?
+</button>
 
   </div>
 
@@ -353,20 +368,22 @@ modern digital experience.
   {/* Google */}
 
   <Button
-    variant="outline"
-    className="w-full h-12 rounded-xl"
-  >
-    🌍 Continue with Google
-  </Button>
+  variant="outline"
+  className="w-full h-12 rounded-xl"
+  onClick={() => alert("Google Button Working")}
+>
+  🌍 Continue with Google
+</Button>
 
   {/* Facebook */}
 
   <Button
-    variant="outline"
-    className="w-full h-12 rounded-xl"
-  >
-    📘 Continue with Facebook
-  </Button>
+  variant="outline"
+  className="w-full h-12 rounded-xl"
+  onClick={() => alert("Facebook Button Working")}
+>
+  📘 Continue with Facebook
+</Button>
 
 </div>
 
@@ -376,9 +393,12 @@ modern digital experience.
     Don't have an account?
   </p>
 
-  <button className="mt-2 text-blue-600 font-bold">
-    Create New Account
-  </button>
+  <button
+  onClick={() => navigate("/register")}
+  className="mt-2 text-blue-600 font-bold"
+>
+  Create New Account
+</button>
 
 </div>
 

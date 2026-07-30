@@ -15,29 +15,100 @@ import CustomerDashboard from "./pages/CustomerDashboard";
 import Notifications from "./pages/Notifications";
 import AdminDashboard from "./pages/AdminDashboard";
 import Register from "./components/Register";
+import ForgotPassword from "./pages/ForgotPassword";
 
 function App() {
   return (
     <>
       <Navbar />
 
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/services" element={<ProtectedRoute><Services /></ProtectedRoute>}/>
-        <Route path="/my-bookings" element={<ProtectedRoute role="customer"><MyBookings /></ProtectedRoute>}/>
-        <Route path="/worker-dashboard" element={<ProtectedRoute role="worker"><WorkerDashboard /></ProtectedRoute>}/>
-       <Route path="/services/:id" element={<ServiceDetails />}/>
-       <Route path="/profile" element={<Profile />} />
-       <Route path="/booking/:id" element={<BookingDetails />}/>
-       <Route path="/worker/:id" element={<WorkerProfile />} />
-       <Route path="/customer-dashboard" element={<CustomerDashboard />} />
-       <Route path="/notifications" element={<Notifications />} />
-       <Route path="/admin-dashboard" element={<AdminDashboard />} />
-       <Route path="/register" element={<Register />} />
+<Routes>
+  <Route path="/" element={<Home />} />
+  <Route path="/login" element={<Login />} />
 
+  <Route
+    path="/services"
+    element={
+      <ProtectedRoute>
+        <Services />
+      </ProtectedRoute>
+    }
+  />
 
-      </Routes>
+  <Route
+    path="/my-bookings"
+    element={
+      <ProtectedRoute role="customer">
+        <MyBookings />
+      </ProtectedRoute>
+    }
+  />
+
+  <Route
+    path="/worker-dashboard"
+    element={
+      <ProtectedRoute role="worker">
+        <WorkerDashboard />
+      </ProtectedRoute>
+    }
+  />
+
+  <Route path="/services/:id" element={<ServiceDetails />} />
+
+  <Route
+    path="/profile"
+    element={
+      <ProtectedRoute>
+        <Profile />
+      </ProtectedRoute>
+    }
+  />
+
+  <Route
+    path="/booking/:id"
+    element={
+      <ProtectedRoute>
+        <BookingDetails />
+      </ProtectedRoute>
+    }
+  />
+
+  <Route path="/worker/:id" element={<WorkerProfile />} />
+
+  <Route
+    path="/customer-dashboard"
+    element={
+      <ProtectedRoute role="customer">
+        <CustomerDashboard />
+      </ProtectedRoute>
+    }
+  />
+
+  <Route
+    path="/notifications"
+    element={
+      <ProtectedRoute>
+        <Notifications />
+      </ProtectedRoute>
+    }
+  />
+
+  <Route
+    path="/admin-dashboard"
+    element={
+      <ProtectedRoute role="admin">
+        <AdminDashboard />
+      </ProtectedRoute>
+    }
+  />
+
+  <Route path="/register" element={<Register />} />
+
+  <Route
+  path="/forgot-password"
+  element={<ForgotPassword />}
+/>
+</Routes>
     </>
   );
 }

@@ -115,6 +115,12 @@ useEffect(() => {
                 Worker Dashboard
               </Nav.Link>
             )}
+
+            {user?.role === "admin" && (
+  <Nav.Link as={Link} to="/admin-dashboard">
+    Admin Dashboard
+  </Nav.Link>
+)}
           </Nav>
 
           {user?.role === "customer" && (

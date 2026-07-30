@@ -6,11 +6,12 @@ export function UserProvider({ children }) {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    const savedUser = localStorage.getItem("user");
+    const token = localStorage.getItem("access");
+const savedUser = localStorage.getItem("user");
 
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
+if (token && savedUser) {
+  setUser(JSON.parse(savedUser));
+}
   }, []);
 
   return (

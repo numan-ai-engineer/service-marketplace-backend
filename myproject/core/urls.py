@@ -21,7 +21,7 @@ from .views import (
 )
 
 from .views import register
-from .api import current_user
+from .api import current_user, login_user
 
 # Router setup
 router = DefaultRouter()
@@ -38,6 +38,7 @@ urlpatterns = [
 
     # Auth
     path("register/", register),
+    path("login/", login_user),
     path("me/", current_user),
 
     # Protected

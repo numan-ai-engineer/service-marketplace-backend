@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
 function Register() {
+   console.log("REGISTER PAGE LOADED");
   const navigate = useNavigate();
 
   const [fullName, setFullName] = useState("");
@@ -50,6 +51,7 @@ function Register() {
   };
 
   const handleRegister = async () => {
+    alert("Button Click Working");
 
     if (!fullName || !username || !email || !phone || !password || !confirmPassword) {
       toast.error("Please fill all fields");
@@ -84,10 +86,14 @@ try {
 
   const data = await response.json();
 
+  console.log("Status:", response.status);
+console.log("Response:", JSON.stringify(data));
+alert(JSON.stringify(data));
+
   if (response.ok) {
     toast.success("Account Created Successfully 🎉");
 
-    navigate("/login");
+    window.location.href = "/login";
   } else {
     toast.error(data.error || "Registration Failed");
   }
@@ -191,11 +197,11 @@ try {
 
         <div className="space-y-5">
 
-          <Input
-            placeholder="Full Name"
-            value={fullName}
-            onChange={(e)=>setFullName(e.target.value)}
-          />
+   <Input
+  placeholder="Full Name"
+  value={fullName}
+  onChange={(e) => setFullName(e.target.value)}
+/>
 
           <Input
             placeholder="Username"
@@ -293,34 +299,23 @@ try {
             </div>
 
           </div>
-
-          <Button
-
-            onClick={handleRegister}
-
-            disabled={loading}
-
-            className="w-full h-14 rounded-2xl text-lg font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:scale-105 transition-all duration-300"
-
-          >
-
-            {loading ? (
-
-              <>
-
-                <Loader2 className="w-5 h-5 mr-2 animate-spin"/>
-
-                Creating Account...
-
-              </>
-
-            ) : (
-
-              "Create Account"
-
-            )}
-
-          </Button>
+<Button
+  onClick={() => {
+    alert("Button Clicked");
+    handleRegister();
+  }}
+  disabled={loading}
+  className="w-full h-14 rounded-2xl text-lg font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:scale-105 transition-all duration-300"
+>
+  {loading ? (
+    <>
+      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+      Creating Account...
+    </>
+  ) : (
+    "Create Account"
+  )}
+</Button>
 
           </div>
 
