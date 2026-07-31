@@ -8,6 +8,11 @@ from .serializers import WorkerVerificationSerializer
 from django.shortcuts import get_object_or_404
 from .ocr import extract_cnic
 from django.contrib.auth import get_user_model
+from django.core.mail import send_mail
+from django.conf import settings
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode
+from django.utils.encoding import force_bytes
 
 from .models import User, Service, WorkerProfile, Booking, Review, Notification
 from .serializers import ( UserSerializer, ServiceSerializer, WorkerProfileSerializer, BookingSerializer, 
@@ -587,3 +592,48 @@ def register(request):
         {"message": "Account Created Successfully"},
         status=status.HTTP_201_CREATED,
     )
+
+@api_view(["POST"])
+def forgot_password(request):
+    email = request.data.get("email")
+
+    if not email:
+        return Response(
+            {"error": "Email is required"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    user = User.objects.filter(email=email).first()
+
+    if not user:
+        return Response(
+            {"error": "No account found with this email"},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    uid = urlsafe_base64_encode(force_bytes(user.pk))
+    token = default_token_generator.make_token(user)
+
+    reset_link = f"http://localhost:5173/reset-password/{uid}/{token}"
+
+    send_mail(
+        subject="Reset Your Service Marketplace Password",
+        message=f"""
+Hello,
+
+Click the link below to reset your password:
+
+{reset_link}
+
+If you did not request this password reset, please ignore this email.
+
+Service Marketplace
+""",
+        from_email=settings.EMAIL_HOST_USER,
+        recipient_list=[email],
+        fail_silently=False,
+    )
+
+    return Response({
+        "message": "Password reset email sent successfully"
+    })

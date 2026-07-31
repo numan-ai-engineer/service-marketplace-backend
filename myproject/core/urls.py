@@ -18,6 +18,7 @@ from .views import (
     verify_worker,
     worker_profile,
     admin_dashboard,
+    forgot_password
 )
 
 from .views import register
@@ -40,6 +41,7 @@ urlpatterns = [
     path("register/", register),
     path("login/", login_user),
     path("me/", current_user),
+    path("forgot-password/", forgot_password),
 
     # Protected
     path("protected/", test_protected),

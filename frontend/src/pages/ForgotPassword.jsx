@@ -34,21 +34,43 @@ function ForgotPassword() {
   };
 
   const handleReset = async () => {
-    if (!email) {
-      toast.error("Please enter your email");
-      return;
+  if (!email) {
+    toast.error("Please enter your email");
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const response = await fetch(
+      "http://127.0.0.1:8000/api/forgot-password/",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    console.log(data);
+
+    if (response.ok) {
+      toast.success(data.message);
+    } else {
+      toast.error(data.error);
     }
-
-    setLoading(true);
-
-    setTimeout(() => {
-      setLoading(false);
-
-      toast.success(
-        "Password Reset API will be connected in next step."
-      );
-    }, 1500);
-  };
+  } catch (error) {
+    console.error(error);
+    toast.error("Server Error");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
 
