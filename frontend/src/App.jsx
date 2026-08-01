@@ -16,6 +16,7 @@ import Notifications from "./pages/Notifications";
 import AdminDashboard from "./pages/AdminDashboard";
 import Register from "./components/Register";
 import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./components/ResetPassword";
 
 function App() {
   return (
@@ -107,6 +108,10 @@ function App() {
   <Route
   path="/forgot-password"
   element={<ForgotPassword />}
+/>
+<Route
+  path="/reset-password/:uid/:token"
+  element={<ResetPassword />}
 />
 </Routes>
     </>

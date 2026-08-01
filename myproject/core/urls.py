@@ -18,13 +18,13 @@ from .views import (
     verify_worker,
     worker_profile,
     admin_dashboard,
-    forgot_password
+    forgot_password,
+    reset_password,
 )
 
 from .views import register
 from .api import current_user, login_user
 
-# Router setup
 router = DefaultRouter()
 router.register(r'users', UserViewSet)
 router.register(r'services', ServiceViewSet)
@@ -37,11 +37,19 @@ urlpatterns = [
     # Booking Status
     path("bookings/<int:pk>/status/", update_booking_status),
 
-    # Auth
+    # Authentication
     path("register/", register),
     path("login/", login_user),
     path("me/", current_user),
+
+    # Forgot Password
     path("forgot-password/", forgot_password),
+
+    # Reset Password
+    path(
+        "reset-password/<uidb64>/<token>/",
+        reset_password,
+    ),
 
     # Protected
     path("protected/", test_protected),
@@ -54,7 +62,7 @@ urlpatterns = [
     path("notifications/", notifications),
     path("notifications/count/", notification_count),
 
-    # Upload Verification
+    # Worker Verification
     path(
         "worker/upload-verification/",
         upload_verification,
@@ -68,23 +76,22 @@ urlpatterns = [
 
     # Admin Dashboard
     path(
-    "admin/dashboard/",
-    admin_dashboard,
-),
+        "admin/dashboard/",
+        admin_dashboard,
+    ),
 
     # Verify Worker
     path(
-    "admin/verify-worker/<int:pk>/",
-    verify_worker,
-),
+        "admin/verify-worker/<int:pk>/",
+        verify_worker,
+    ),
 
-# Worker Profile
-   path(
-    "worker/profile/<int:pk>/",
-    worker_profile,
-),
+    # Worker Profile
+    path(
+        "worker/profile/<int:pk>/",
+        worker_profile,
+    ),
 
-
-    # Router
-    path("", include(router.urls))
+    # Router URLs
+    path("", include(router.urls)),
 ]

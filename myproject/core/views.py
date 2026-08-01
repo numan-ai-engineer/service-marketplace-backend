@@ -13,6 +13,10 @@ from django.conf import settings
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_decode
+from django.contrib.auth.hashers import make_password
+from django.utils.encoding import force_str
+
 
 from .models import User, Service, WorkerProfile, Booking, Review, Notification
 from .serializers import ( UserSerializer, ServiceSerializer, WorkerProfileSerializer, BookingSerializer, 
@@ -637,3 +641,36 @@ Service Marketplace
     return Response({
         "message": "Password reset email sent successfully"
     })
+
+@api_view(["POST"])
+def reset_password(request, uidb64, token):
+    try:
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        user = User.objects.get(pk=uid)
+
+    except Exception:
+        return Response(
+            {"error": "Invalid reset link"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if not default_token_generator.check_token(user, token):
+        return Response(
+            {"error": "Reset link has expired"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    password = request.data.get("password")
+
+    if not password:
+        return Response(
+            {"error": "Password is required"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    user.password = make_password(password)
+    user.save()
+
+    return Response(
+        {"message": "Password updated successfully"}
+    )
