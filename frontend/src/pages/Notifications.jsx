@@ -20,9 +20,8 @@ function Notifications() {
 
     console.log(response);
 
-    if (response.ok) {
       setNotifications(response.data);
-    }
+    
   };
 
   return (

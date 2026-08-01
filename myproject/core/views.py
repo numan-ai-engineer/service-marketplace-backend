@@ -668,9 +668,16 @@ def reset_password(request, uidb64, token):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    if len(password) < 8:
+        return Response(
+            {"error": "Password must be at least 8 characters long"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
     user.password = make_password(password)
     user.save()
 
     return Response(
-        {"message": "Password updated successfully"}
+        {"message": "Password updated successfully"},
+        status=status.HTTP_200_OK,
     )

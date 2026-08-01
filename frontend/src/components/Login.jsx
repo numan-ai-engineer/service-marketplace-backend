@@ -69,6 +69,7 @@ console.log(response);
 
         const userData = await userResponse.json();
         console.log("USER DATA:", userData);
+        console.log("ROLE:", userData.role);
 
         // Save User in Local Storage
 localStorage.setItem("user", JSON.stringify(userData));

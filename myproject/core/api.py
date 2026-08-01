@@ -79,6 +79,7 @@ def login_user(request):
 
     username = request.data.get("username")
     password = request.data.get("password")
+    
 
     user = authenticate(
         username=username,
