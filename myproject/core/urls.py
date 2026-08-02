@@ -20,6 +20,7 @@ from .views import (
     admin_dashboard,
     forgot_password,
     reset_password,
+     worker_online_status
 )
 
 from .views import register
@@ -67,6 +68,12 @@ urlpatterns = [
         "worker/upload-verification/",
         upload_verification,
     ),
+
+    # Worker online status
+    path(
+    "worker/online-status/",
+    worker_online_status,
+),
 
     # Pending Workers
     path(

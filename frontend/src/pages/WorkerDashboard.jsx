@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 function WorkerDashboard() {
   const [dashboard, setDashboard] = useState(null);
 
+  const [isOnline, setIsOnline] = useState(false);
+
   const [verification, setVerification] = useState({
     cnic: "",
     cnic_front: null,
@@ -36,6 +38,8 @@ function WorkerDashboard() {
     const data = await response.json();
 
     setDashboard(data);
+
+    setIsOnline(data.is_online);
   };
 
   useEffect(() => {
@@ -65,6 +69,41 @@ function WorkerDashboard() {
 
     loadDashboard();
   };
+
+  const toggleOnlineStatus = async () => {
+  const token = localStorage.getItem("access");
+
+  try {
+    const response = await fetch(
+      "http://127.0.0.1:8000/api/worker/online-status/",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + token,
+        },
+        body: JSON.stringify({
+          is_online: !isOnline,
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (response.ok) {
+      setIsOnline(data.is_online);
+
+      alert(data.message);
+
+      loadDashboard();
+    } else {
+      alert(data.error);
+    }
+  } catch (error) {
+    console.error(error);
+    alert("Server Error");
+  }
+};
 
   const uploadVerification = async () => {
     const token = localStorage.getItem("access");
@@ -123,6 +162,20 @@ return (
         <h1 className="text-4xl font-extrabold">
           Welcome, {dashboard.worker}
         </h1>
+
+        <div className="mt-4">
+  <button
+  onClick={toggleOnlineStatus}
+    className={`px-6 py-3 rounded-2xl font-bold text-white shadow-lg transition
+    ${
+      isOnline
+        ? "bg-red-600 hover:bg-red-700"
+        : "bg-green-600 hover:bg-green-700"
+    }`}
+  >
+    {isOnline ? "🔴 Go Offline" : "🟢 Go Online"}
+  </button>
+</div>
 
         <p className="text-blue-100 mt-2 text-lg">
           Professional Worker Dashboard

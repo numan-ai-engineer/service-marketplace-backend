@@ -44,28 +44,27 @@ class ServiceViewSet(viewsets.ModelViewSet):
 class WorkerProfileViewSet(viewsets.ModelViewSet):
     queryset = WorkerProfile.objects.all()
     serializer_class = WorkerProfileSerializer
-    
-def get_queryset(self):
 
-    queryset = WorkerProfile.objects.filter(
-        is_verified=True
-    )
+    def get_queryset(self):
 
-    city = self.request.query_params.get("city")
-
-    service = self.request.query_params.get("service")
-
-    if city:
-        queryset = queryset.filter(
-            city__icontains=city
+        queryset = WorkerProfile.objects.filter(
+            is_verified=True,
+            is_available=True,
+            is_online=True,
         )
 
-    if service:
-        queryset = queryset.filter(
-            services__name__icontains=service
-        )
+        city = self.request.query_params.get("city")
+        service = self.request.query_params.get("service")
 
-    return queryset
+        if city:
+            queryset = queryset.filter(city__icontains=city)
+
+        if service:
+            queryset = queryset.filter(
+                services__name__icontains=service
+            )
+
+        return queryset
 
 
 # =========================
@@ -286,17 +285,22 @@ def worker_dashboard(request):
     ).count()
 
     return Response({
-        "worker": request.user.username,
-        "rating": worker_profile.rating,
-        "total_reviews": total_reviews,
+    "worker": request.user.username,
+    "rating": worker_profile.rating,
+    "total_reviews": total_reviews,
 
-        "total": bookings.count(),
-        "pending": bookings.filter(status="pending").count(),
-        "accepted": bookings.filter(status="accepted").count(),
-        "completed": bookings.filter(status="completed").count(),
+    "total": bookings.count(),
+    "pending": bookings.filter(status="pending").count(),
+    "accepted": bookings.filter(status="accepted").count(),
+    "completed": bookings.filter(status="completed").count(),
 
-        "bookings": BookingSerializer(bookings, many=True).data
-    })
+    "bookings": BookingSerializer(bookings, many=True).data,
+
+    "is_online": worker_profile.is_online,
+})
+
+
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def notifications(request):
@@ -681,3 +685,47 @@ def reset_password(request, uidb64, token):
         {"message": "Password updated successfully"},
         status=status.HTTP_200_OK,
     )
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def worker_online_status(request):
+
+    if request.user.role != "worker":
+        return Response(
+            {"error": "Only workers can change status"},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    worker = WorkerProfile.objects.get(user=request.user)
+
+    worker.is_online = request.data.get("is_online", False)
+    worker.save()
+
+    return Response({
+        "message": "Status Updated",
+        "is_online": worker.is_online,
+    })
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def update_worker_location(request):
+
+    if request.user.role != "worker":
+        return Response(
+            {"error": "Only workers allowed"},
+            status=403
+        )
+
+    worker = WorkerProfile.objects.get(user=request.user)
+
+    worker.latitude = request.data.get("latitude")
+    worker.longitude = request.data.get("longitude")
+
+    from django.utils import timezone
+    worker.last_location_update = timezone.now()
+
+    worker.save()
+
+    return Response({
+        "message": "Location Updated"
+    })
