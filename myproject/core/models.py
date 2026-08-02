@@ -58,38 +58,38 @@ class WorkerProfile(models.Model):
     is_verified = models.BooleanField(default=False)
 
     verification_status = models.CharField(
-    max_length=20,
-    choices=[
-        ("pending", "Pending"),
-        ("approved", "Approved"),
-        ("rejected", "Rejected"),
-    ],
-    default="pending",
-)
+        max_length=20,
+        choices=[
+            ("pending", "Pending"),
+            ("approved", "Approved"),
+            ("rejected", "Rejected"),
+        ],
+        default="pending",
+    )
 
-is_online = models.BooleanField(default=False)
+    is_online = models.BooleanField(default=False)
 
-latitude = models.DecimalField(
-    max_digits=9,
-    decimal_places=6,
-    default=0
-)
+    latitude = models.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        default=0
+    )
 
-longitude = models.DecimalField(
-    max_digits=9,
-    decimal_places=6,
-    default=0
-)
+    longitude = models.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        default=0
+    )
 
-last_location_update = models.DateTimeField(
-    null=True,
-    blank=True
-)
+    last_location_update = models.DateTimeField(
+        null=True,
+        blank=True
+    )
 
-is_available = models.BooleanField(default=True)
+    is_available = models.BooleanField(default=True)
 
-def __str__(self):
-    return self.user.username
+    def __str__(self):
+        return self.user.username
 
 
 class Booking(models.Model):

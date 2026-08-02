@@ -43,8 +43,49 @@ function WorkerDashboard() {
   };
 
   useEffect(() => {
-    loadDashboard();
-  }, []);
+  loadDashboard();
+
+  navigator.geolocation.watchPosition(
+    (position) => {
+      updateLocation(
+        position.coords.latitude,
+        position.coords.longitude
+      );
+    },
+    (error) => {
+      console.log(error);
+    },
+    {
+      enableHighAccuracy: true,
+      maximumAge: 0,
+      timeout: 5000,
+    }
+  );
+
+}, []);
+
+  const updateLocation = async (latitude, longitude) => {
+  const token = localStorage.getItem("access");
+
+  try {
+    await fetch(
+      "http://127.0.0.1:8000/api/worker/update-location/",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + token,
+        },
+        body: JSON.stringify({
+          latitude,
+          longitude,
+        }),
+      }
+    );
+  } catch (error) {
+    console.log(error);
+  }
+};
 
   const updateStatus = async (bookingId, status) => {
     const token = localStorage.getItem("access");

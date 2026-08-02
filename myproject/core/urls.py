@@ -20,7 +20,8 @@ from .views import (
     admin_dashboard,
     forgot_password,
     reset_password,
-     worker_online_status
+     worker_online_status,
+     update_worker_location,
 )
 
 from .views import register
@@ -73,6 +74,12 @@ urlpatterns = [
     path(
     "worker/online-status/",
     worker_online_status,
+),
+
+# Updated worker location endpoint
+path(
+    "worker/update-location/",
+    update_worker_location,
 ),
 
     # Pending Workers
