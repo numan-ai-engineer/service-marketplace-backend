@@ -690,6 +690,8 @@ def reset_password(request, uidb64, token):
 @permission_classes([IsAuthenticated])
 def worker_online_status(request):
 
+    print("REQUEST DATA:", request.data)
+
     if request.user.role != "worker":
         return Response(
             {"error": "Only workers can change status"},
@@ -698,8 +700,14 @@ def worker_online_status(request):
 
     worker = WorkerProfile.objects.get(user=request.user)
 
+    print("Before:", worker.is_online)
+
     worker.is_online = request.data.get("is_online", False)
     worker.save()
+
+    worker.refresh_from_db()
+
+    print("After:", worker.is_online)
 
     return Response({
         "message": "Status Updated",

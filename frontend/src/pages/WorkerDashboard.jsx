@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import GoogleMapComponent from "../components/GoogleMap";
 
 function WorkerDashboard() {
   const [dashboard, setDashboard] = useState(null);
@@ -112,6 +113,12 @@ function WorkerDashboard() {
   };
 
   const toggleOnlineStatus = async () => {
+
+     console.log("BUTTON CLICKED");
+
+     console.log("Current isOnline:", isOnline);
+console.log("Sending:", !isOnline);
+
   const token = localStorage.getItem("access");
 
   try {
@@ -197,6 +204,14 @@ return (
         👷
 
       </div>
+
+      <div className="bg-white rounded-3xl shadow-xl p-6 mt-8">
+  <h2 className="text-2xl font-bold mb-4">
+    📍 Live Worker Location
+  </h2>
+
+  <GoogleMapComponent />
+</div>
 
       <div>
 

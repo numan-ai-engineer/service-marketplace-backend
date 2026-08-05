@@ -82,7 +82,6 @@ localStorage.setItem("user", JSON.stringify(userData));
       toast.success("Login Successful 🎉");
 
 // Redirect according to role
-
 if (userData.role === "admin") {
 
   navigate("/admin-dashboard");
@@ -93,7 +92,8 @@ if (userData.role === "admin") {
 
 } else {
 
-  navigate("/customer-dashboard");
+  // Customer
+  navigate("/");
 
 }
       } else {

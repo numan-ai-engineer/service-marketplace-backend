@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Button, Container, Row, Col, Card, Badge, } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import api from "../utils/api";
+import GoogleMapComponent from "../components/GoogleMap";
 
 function Home() {
   const navigate = useNavigate();
@@ -24,15 +25,14 @@ const loadServices = async () => {
 const loadWorkers = async () => {
   const response = await api.get("/workers/");
 
-  if (response.ok) {
-    console.log("Workers Data:");
-    console.log(response.data);
+  console.log("API RESPONSE:", response);
 
-    response.data.forEach((worker) => {
-      console.log(worker);
-    });
+  if (response.ok) {
+    console.log("Workers:", response.data);
 
     setWorkers(response.data);
+  } else {
+    console.log("API FAILED");
   }
 };
 
@@ -271,6 +271,17 @@ return (
   </Row>
 
 </Container>
+
+<Container className="mb-5">
+
+  <h2 className="text-center fw-bold mb-4">
+    Nearby Workers
+  </h2>
+
+  <GoogleMapComponent workers={workers} />
+
+</Container>
+
 {/* Featured Workers */}
 
 <Container className="mb-5">
