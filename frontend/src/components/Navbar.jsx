@@ -4,6 +4,7 @@ import {
   Nav,
   Container,
   Button,
+  NavDropdown,
 } from "react-bootstrap";
 import { useContext, useEffect, useState } from "react";
 import UserContext from "../context/UserContext";
@@ -14,7 +15,7 @@ function Navbar() {
   const { user, setUser } = useContext(UserContext);
   const [notificationCount, setNotificationCount] = useState(0);
 
-  console.log(user);
+  console.log("Navbar User:", user);
 const loadNotificationCount = async () => {
   const token = localStorage.getItem("access");
 
@@ -101,42 +102,49 @@ useEffect(() => {
     )}
   </Nav.Link>
 )}
-            
-
-
-            {user?.role === "customer" && (
-              <Nav.Link as={Link} to="/my-bookings">
-                My Bookings
-              </Nav.Link>
-            )}
-
-            {user?.role === "worker" && (
-              <Nav.Link as={Link} to="/worker-dashboard">
-                Worker Dashboard
-              </Nav.Link>
-            )}
-
-            {user?.role === "admin" && (
-  <Nav.Link as={Link} to="/admin-dashboard">
-    Admin Dashboard
-  </Nav.Link>
-)}
+  
           </Nav>
 
-          {user?.role === "customer" && (
-  <Nav.Link as={Link} to="/customer-dashboard">
-    Customer Dashboard
-  </Nav.Link>
-)}
-
           {user && (
-            <Button
-              variant="light"
-              onClick={handleLogout}
-            >
-              Logout
-            </Button>
-          )}
+  <NavDropdown
+    title={`👤 ${user.username}`}
+    id="profile-dropdown"
+    align="end"
+  >
+    <NavDropdown.Item as={Link} to="/profile">
+      Profile
+    </NavDropdown.Item>
+
+    {user.role === "customer" && (
+      <NavDropdown.Item as={Link} to="/customer-dashboard">
+        Dashboard
+      </NavDropdown.Item>
+    )}
+
+    {user.role === "worker" && (
+      <NavDropdown.Item as={Link} to="/worker-dashboard">
+        Dashboard
+      </NavDropdown.Item>
+    )}
+
+    {user.role === "admin" && (
+      <NavDropdown.Item as={Link} to="/admin-dashboard">
+        Dashboard
+      </NavDropdown.Item>
+    )}
+
+    <NavDropdown.Item as={Link} to="/notifications">
+      Notifications
+    </NavDropdown.Item>
+
+    <NavDropdown.Divider />
+
+    <NavDropdown.Item onClick={handleLogout}>
+      Logout
+    </NavDropdown.Item>
+  </NavDropdown>
+)}
+  
         </BSNavbar.Collapse>
       </Container>
     </BSNavbar>
