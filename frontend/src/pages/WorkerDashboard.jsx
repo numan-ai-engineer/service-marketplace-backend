@@ -46,7 +46,11 @@ function WorkerDashboard() {
   useEffect(() => {
   loadDashboard();
 
-  navigator.geolocation.watchPosition(
+  const interval = setInterval(() => {
+    loadDashboard();
+  }, 10000);
+
+  const watchId = navigator.geolocation.watchPosition(
     (position) => {
       updateLocation(
         position.coords.latitude,
@@ -62,6 +66,11 @@ function WorkerDashboard() {
       timeout: 5000,
     }
   );
+
+  return () => {
+    clearInterval(interval);
+    navigator.geolocation.clearWatch(watchId);
+  };
 
 }, []);
 
@@ -513,89 +522,134 @@ className="w-full border rounded-xl p-3 focus:ring-2 focus:ring-blue-500"
   </p>
 </div>
 
-{dashboard.bookings.map((booking) => (
+{[...dashboard.bookings]
+  .sort((a, b) => Number(b.id) - Number(a.id))
+  .map((booking, index) => (
 
-<div
-key={booking.id}
-className="bg-white rounded-3xl shadow-xl border border-gray-200 p-7 mb-8 hover:shadow-2xl transition duration-300"
->
+    <div
+      key={booking.id}
+      className={`bg-white rounded-3xl shadow-xl border p-7 mb-8 transition duration-300
+        ${
+          index === 0
+            ? "border-4 border-green-400"
+            : "border-gray-200"
+        }
+      `}
+    >
 
-<div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center mb-6">
 
-<div>
+        <div>
 
-<h2 className="text-2xl font-bold text-gray-800">
-🔧 {booking.service.name}
-</h2>
+          {index === 0 && (
+            <span className="inline-block mb-2 bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-bold">
+              🆕 MOST RECENT BOOKING
+            </span>
+          )}
 
-<p className="text-gray-500 mt-1">
-Booking #{booking.id}
-</p>
+          <h2 className="text-2xl font-bold text-gray-800">
+            🔧 {booking.service.name}
+          </h2>
 
-</div>
+          <p className="text-gray-500 mt-1">
+            Booking #{booking.id}
+          </p>
 
-<span
-className={`px-5 py-2 rounded-full text-sm font-bold
-${
-booking.status==="pending"
-?"bg-yellow-100 text-yellow-700"
-:booking.status==="accepted"
-?"bg-green-100 text-green-700"
-:"bg-blue-100 text-blue-700"
-}`}
->
+        </div>
 
-{booking.status.toUpperCase()}
+        <span
+          className={`px-5 py-2 rounded-full text-sm font-bold
+            ${
+              booking.status === "pending"
+                ? "bg-yellow-100 text-yellow-700"
+                : booking.status === "accepted"
+                ? "bg-green-100 text-green-700"
+                : "bg-blue-100 text-blue-700"
+            }
+          `}
+        >
+          {booking.status.toUpperCase()}
+        </span>
 
-</span>
+      </div>
 
-</div>
+      <hr className="mb-5" />
 
-<hr className="mb-5"/>
+      <div className="space-y-3">
 
-<div className="space-y-3">
+        <p className="text-lg">
+          👤{" "}
+          <span className="font-semibold">
+            {booking.customer.name}
+          </span>
+        </p>
 
-<p className="text-lg">
-👤 <span className="font-semibold">
-{booking.customer.name}
-</span>
-</p>
+        <p>
+          📞 {booking.customer.phone}
+        </p>
 
-<p>
-📞 {booking.customer.phone}
-</p>
+        <p>
+          📍 {booking.address || "Address not provided"}
+        </p>
 
-<p>
-📍 {booking.address || "Address not provided"}
-</p>
+        {booking.created_at && (
+          <p>
+            📅{" "}
+            <span className="font-semibold">
+              {new Date(booking.created_at).toLocaleString()}
+            </span>
+          </p>
+        )}
 
-</div>
+      </div>
 
-<div className="grid grid-cols-2 gap-4 mt-8">
+      <div className="mt-8">
 
-<button
-onClick={()=>updateStatus(booking.id,"accepted")}
-className="bg-green-600 hover:bg-green-700 text-white rounded-2xl py-3 font-bold shadow-md"
->
+        {booking.status === "pending" && (
+          <button
+            onClick={() =>
+              updateStatus(booking.id, "accepted")
+            }
+            className="w-full bg-green-600 hover:bg-green-700 text-white rounded-2xl py-3 font-bold shadow-md"
+          >
+            ✅ Accept Booking
+          </button>
+        )}
 
-✅ Accept
+        {booking.status === "accepted" && (
+          <button
+            onClick={() =>
+              updateStatus(booking.id, "completed")
+            }
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-2xl py-3 font-bold shadow-md"
+          >
+            ✔ Mark as Completed
+          </button>
+        )}
 
-</button>
+        {booking.status === "completed" && (
+          <div className="w-full bg-blue-100 text-blue-700 rounded-2xl py-3 text-center font-bold">
+            🎉 Booking Completed
+          </div>
+        )}
 
-<button
-onClick={()=>updateStatus(booking.id,"completed")}
-className="bg-blue-600 hover:bg-blue-700 text-white rounded-2xl py-3 font-bold shadow-md"
->
+        {booking.status === "rejected" && (
+          <div className="w-full bg-red-100 text-red-700 rounded-2xl py-3 text-center font-bold">
+            ❌ Booking Rejected
+          </div>
+        )}
 
-✔ Complete
+        {booking.status === "cancelled" && (
+          <div className="w-full bg-gray-100 text-gray-700 rounded-2xl py-3 text-center font-bold">
+            🚫 Booking Cancelled
+          </div>
+        )}
 
-</button>
+      </div>
 
-</div>
+    </div>
 
-</div>
-
-))}
+  ))}
 
 </div>
 

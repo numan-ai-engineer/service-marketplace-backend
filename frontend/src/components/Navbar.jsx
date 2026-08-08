@@ -38,13 +38,20 @@ function Navbar() {
     }
   };
 
-  useEffect(() => {
-    if (user) {
-      loadNotificationCount();
-    } else {
-      setNotificationCount(0);
-    }
-  }, [user]);
+ useEffect(() => {
+  if (!user) {
+    setNotificationCount(0);
+    return;
+  }
+
+  loadNotificationCount();
+
+  const interval = setInterval(() => {
+    loadNotificationCount();
+  }, 10000);
+
+  return () => clearInterval(interval);
+}, [user]);
 
   const handleLogout = () => {
     localStorage.removeItem("access");
