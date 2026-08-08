@@ -2,10 +2,14 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import {
   Container,
+  Row,
+  Col,
   Card,
   Badge,
   Form,
   Button,
+  Spinner,
+  Alert,
 } from "react-bootstrap";
 
 import api from "../utils/api";
@@ -14,27 +18,30 @@ function WorkerProfile() {
   const { id } = useParams();
 
   const [worker, setWorker] = useState(null);
-
   const [reviews, setReviews] = useState([]);
 
   const [rating, setRating] = useState(5);
-
   const [comment, setComment] = useState("");
 
   const [bookingId, setBookingId] = useState("");
 
-  const [editingReviewId, setEditingReviewId] = useState(null);
+  const [editingReviewId, setEditingReviewId] =
+    useState(null);
 
-const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] =
+    useState(false);
 
-const user = JSON.parse(localStorage.getItem("user"));
+  const [loading, setLoading] =
+    useState(true);
 
-const isAdmin = user?.role === "admin";
+  const [error, setError] =
+    useState("");
 
-console.log("isEditing =", isEditing);
+  const user = JSON.parse(
+    localStorage.getItem("user")
+  );
 
-console.log("Current User:", user);
-console.log("isAdmin:", isAdmin);
+  const isAdmin = user?.role === "admin";
 
   useEffect(() => {
     loadWorker();
@@ -46,285 +53,671 @@ console.log("isAdmin:", isAdmin);
       loadBooking();
     }
   }, [worker]);
+
   const loadWorker = async () => {
-  const response = await api.get(`/workers/${id}/`);
+    try {
+      setLoading(true);
+      setError("");
 
-  console.log("Worker:", response);
+      const response = await api.get(
+        `/workers/${id}/`
+      );
 
-  if (response.ok) {
-    setWorker(response.data);
-  }
-};
+      console.log("Worker:", response);
 
-const loadReviews = async () => {
-  const response = await api.get("/reviews/");
+      if (response.ok) {
+        setWorker(response.data);
+      } else {
+        setError("Unable to load worker profile.");
+      }
+    } catch (error) {
+      console.log("Worker Error:", error);
+      setError("Something went wrong.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  console.log("Reviews:", response);
+  const loadReviews = async () => {
+    try {
+      const response = await api.get("/reviews/");
 
-  if (response.ok) {
-    const workerReviews = response.data.filter(
-      (review) => review.worker == id
+      console.log("Reviews:", response);
+
+      if (response.ok) {
+        const workerReviews =
+          response.data.filter(
+            (review) => review.worker == id
+          );
+
+        setReviews(workerReviews);
+      }
+    } catch (error) {
+      console.log("Reviews Error:", error);
+    }
+  };
+
+  const loadBooking = async () => {
+    if (!worker) return;
+
+    try {
+      const token =
+        localStorage.getItem("access");
+
+      const response = await api.get(
+        "/bookings/",
+        {
+          headers: {
+            Authorization:
+              "Bearer " + token,
+          },
+        }
+      );
+
+      console.log("Bookings:", response);
+
+      if (response.ok) {
+        const booking =
+          response.data.find(
+            (b) =>
+              b.worker.id ==
+                worker.user.id &&
+              b.status === "completed"
+          );
+
+        if (booking) {
+          setBookingId(booking.id);
+
+          console.log(
+            "Booking ID:",
+            booking.id
+          );
+        }
+      }
+    } catch (error) {
+      console.log("Booking Error:", error);
+    }
+  };
+
+  const submitReview = async (e) => {
+    e.preventDefault();
+
+    console.log("Booking ID:", bookingId);
+    console.log("Rating:", rating);
+    console.log("Comment:", comment);
+
+    if (!bookingId) {
+      alert("No completed booking found.");
+      return;
+    }
+
+    let response;
+
+    try {
+      if (isEditing) {
+        response = await api.patch(
+          `/reviews/${editingReviewId}/`,
+          {
+            rating: Number(rating),
+            comment: comment,
+          }
+        );
+      } else {
+        response = await api.post(
+          "/reviews/",
+          {
+            booking: bookingId,
+            rating: Number(rating),
+            comment: comment,
+          }
+        );
+      }
+
+      console.log(response);
+
+      if (response.ok) {
+        alert(
+          isEditing
+            ? "Review Updated Successfully!"
+            : "Review Submitted Successfully!"
+        );
+
+        setIsEditing(false);
+        setEditingReviewId(null);
+        setRating(5);
+        setComment("");
+
+        loadReviews();
+      } else {
+        alert(
+          JSON.stringify(response.data)
+        );
+      }
+    } catch (error) {
+      console.log(
+        "Review Submit Error:",
+        error
+      );
+
+      alert("Something went wrong.");
+    }
+  };
+
+  const deleteReview = async (reviewId) => {
+    console.log(
+      "Deleting Review ID:",
+      reviewId
     );
-    console.log(workerReviews);
 
-    setReviews(workerReviews);
-  }
-};
+    try {
+      const token =
+        localStorage.getItem("access");
 
-const loadBooking = async () => {
-  if (!worker) return;
+      const response =
+        await api.delete(
+          `/reviews/${reviewId}/`,
+          {
+            headers: {
+              Authorization:
+                "Bearer " + token,
+            },
+          }
+        );
 
-  const token = localStorage.getItem("access");
+      console.log(response);
 
-  const response = await api.get("/bookings/", {
-    headers: {
-      Authorization: "Bearer " + token,
-    },
-  });
+      if (response.ok) {
+        alert(
+          "Review Deleted Successfully!"
+        );
 
-  console.log("Bookings:", response);
-
-  if (response.ok) {
-    const booking = response.data.find(
-      (b) =>
-        b.worker.id == worker.user.id &&
-        b.status === "completed"
-    );
-
-    if (booking) {
-      setBookingId(booking.id);
-      console.log("Booking ID:", booking.id);
+        loadReviews();
+      } else {
+        alert(
+          JSON.stringify(response.data)
+        );
+      }
+    } catch (error) {
+      console.log(
+        "Delete Review Error:",
+        error
+      );
     }
-  }
-};
+  };
 
-const submitReview = async (e) => {
-  e.preventDefault();
+  /* LOADING */
 
-  console.log("Booking ID:", bookingId);
-  console.log("Rating:", rating);
-  console.log("Comment:", comment);
+  if (loading) {
+    return (
+      <Container className="py-5 text-center">
 
-  const token = localStorage.getItem("access");
-
-  if (!bookingId) {
-    alert("No completed booking found.");
-    return;
-  }
-
- let response;
-
-if (isEditing) {
-  response = await api.patch(
-    `/reviews/${editingReviewId}/`,
-    {
-      rating: Number(rating),
-      comment: comment,
-    }
-  );
-} else {
-  response = await api.post(
-    "/reviews/",
-    {
-      booking: bookingId,
-      rating: Number(rating),
-      comment: comment,
-    }
-  );
-}
-
-  console.log(response);
-  console.log("Status:", response.status);
-  console.log("Data:", response.data);
-
-if (response.ok) {
-  alert(
-    isEditing
-      ? "Review Updated Successfully!"
-      : "Review Submitted Successfully!"
-  );
-
-  setIsEditing(false);
-  setEditingReviewId(null);
-
-  setRating(5);
-  setComment("");
-
-  loadReviews();
-} else {
-  console.log(response);
-  alert(JSON.stringify(response.data));
-}
-};
-
-const deleteReview = async (reviewId) => {
-
-  console.log("Deleting Review ID:", reviewId);
-  const token = localStorage.getItem("access");
-
-  const response = await api.delete(
-    `/reviews/${reviewId}/`,
-    {
-      headers: {
-        Authorization: "Bearer " + token,
-      },
-    }
-  );
-
-  console.log(response);
-
-if (response.ok) {
-  alert("Review Deleted Successfully!");
-  loadReviews();
-} else {
-  console.log(response);
-  alert(JSON.stringify(response.data));
-}
-};
-
-if (!worker) {
-  return <h2 className="text-center mt-5">Loading...</h2>;
-}
-
-
-return (
-  <Container className="mt-5">
-    <Card className="shadow p-4">
-
-      <h2 className="mb-4">Worker Profile</h2>
-
-      <h4>👷 {worker.user.name}</h4>
-
-      <p className="mt-3">📞 {worker.user.phone}</p>
-
-      <p>📍 {worker.city}</p>
-
-      <p>⭐ Rating: {worker.rating}</p>
-
-      <p>💼 Experience: {worker.experience_years} Years</p>
-
-      <p>
-        Availability:{" "}
-        {worker.is_available ? (
-          <Badge bg="success">Available</Badge>
-        ) : (
-          <Badge bg="danger">Not Available</Badge>
-        )}
-      </p>
-
-      <div className="mt-3">
-        <strong>Services:</strong>
-        <br />
-        {worker.services.map((service, index) => (
-          <Badge
-            bg="primary"
-            className="me-2 mt-2"
-            key={index}
-          >
-            {service}
-          </Badge>
-        ))}
-      </div>
-<hr className="my-4" />
-
-{!isAdmin && (
-  <>
-    <h4>Write a Review</h4>
-
-    <Form className="mt-3" onSubmit={submitReview}>
-      <Form.Group className="mb-3">
-        <Form.Label>Rating</Form.Label>
-
-        <Form.Select
-          value={rating}
-          onChange={(e) => setRating(e.target.value)}
-        >
-          <option value="5">⭐⭐⭐⭐⭐ (5)</option>
-          <option value="4">⭐⭐⭐⭐ (4)</option>
-          <option value="3">⭐⭐⭐ (3)</option>
-          <option value="2">⭐⭐ (2)</option>
-          <option value="1">⭐ (1)</option>
-        </Form.Select>
-      </Form.Group>
-
-      <Form.Group className="mb-3">
-        <Form.Label>Comment</Form.Label>
-
-        <Form.Control
-          as="textarea"
-          rows={4}
-          value={comment}
-          onChange={(e) => setComment(e.target.value)}
-          placeholder="Write your review..."
+        <Spinner
+          animation="border"
+          variant="primary"
         />
-      </Form.Group>
 
-      <Button variant="primary" type="submit">
-        {isEditing ? "Update Review" : "Submit Review"}
-      </Button>
-    </Form>
-  </>
-)}
-      <hr className="my-4" />
+        <p className="text-muted mt-3">
+          Loading worker profile...
+        </p>
 
-      <h4>Customer Reviews</h4>
+      </Container>
+    );
+  }
 
-      {reviews.length === 0 ? (
-        <p>No reviews yet.</p>
-      ) : (
-        reviews.map((review) => (
-          <Card key={review.id} className="mt-3 p-3">
-            <h5>⭐ {review.rating}/5</h5>
+  /* ERROR */
 
-            <p>{review.comment}</p>
+  if (error) {
+    return (
+      <Container className="py-5">
 
-            <small>
-              By: <strong>{review.customer_name}</strong>
-            </small>
-            
-    {!isAdmin && (
-  <div className="mt-2">
+        <Alert variant="danger">
+          {error}
+        </Alert>
 
-    <Button
-      variant="warning"
-      size="sm"
-      onClick={() => {
-        console.log("Edit Button Clicked", review.id);
+      </Container>
+    );
+  }
 
-        setIsEditing(true);
-        setEditingReviewId(review.id);
-        setRating(review.rating);
-        setComment(review.comment);
+  if (!worker) {
+    return (
+      <Container className="py-5 text-center">
 
-        window.scrollTo({
-          top: 0,
-          behavior: "smooth",
-        });
-      }}
-    >
-      Edit
-    </Button>
+        <div style={{ fontSize: "60px" }}>
+          👷
+        </div>
 
-    <Button
-      variant="danger"
-      size="sm"
-      className="ms-2"
-      onClick={() => deleteReview(review.id)}
-    >
-      Delete
-    </Button>
+        <h3 className="fw-bold mt-3">
+          Worker Not Found
+        </h3>
 
-  </div>
-)}
+      </Container>
+    );
+  }
 
-          </Card>
-        ))
-      )}
+  return (
+    <>
+      {/* PROFILE HERO */}
 
-    </Card>
-  </Container>
-);
+      <section
+        className="py-5"
+        style={{
+          background:
+            "linear-gradient(135deg,#0f172a,#1d4ed8,#312e81)",
+        }}
+      >
+        <Container className="py-4">
 
+          <Row className="align-items-center">
+
+            <Col
+              lg={4}
+              className="text-center mb-4 mb-lg-0"
+            >
+
+              <img
+                src="https://i.pravatar.cc/300?img=12"
+                alt="worker"
+                className="rounded-circle shadow-lg"
+                style={{
+                  width: "180px",
+                  height: "180px",
+                  objectFit: "cover",
+                  border: "5px solid white",
+                }}
+              />
+
+            </Col>
+
+            <Col lg={8}>
+
+              <Badge
+                bg={
+                  worker.is_available
+                    ? "success"
+                    : "danger"
+                }
+                className="rounded-pill px-3 py-2 mb-3"
+              >
+                {worker.is_available
+                  ? "✓ Available"
+                  : "Not Available"}
+              </Badge>
+
+              <h1 className="display-5 fw-bold text-white">
+                {worker.user.name}
+              </h1>
+
+              <p className="text-white-50 fs-5">
+                📍 {worker.city}
+              </p>
+
+              <div className="d-flex flex-wrap gap-3 mt-3">
+
+                <Badge
+                  bg="warning"
+                  text="dark"
+                  className="px-3 py-2"
+                >
+                  ⭐ {worker.rating}
+                </Badge>
+
+                <Badge
+                  bg="light"
+                  text="dark"
+                  className="px-3 py-2"
+                >
+                  💼 {worker.experience_years} Years
+                </Badge>
+
+              </div>
+
+            </Col>
+
+          </Row>
+
+        </Container>
+      </section>
+
+      {/* MAIN CONTENT */}
+
+      <Container className="py-5">
+
+        <Row className="g-4">
+
+          {/* WORKER INFORMATION */}
+
+          <Col lg={8}>
+
+            <Card className="border-0 shadow-sm rounded-4">
+
+              <Card.Body className="p-4 p-lg-5">
+
+                <h3 className="fw-bold mb-4">
+                  Worker Information
+                </h3>
+
+                <Row className="g-4">
+
+                  <Col md={6}>
+
+                    <div className="p-3 bg-light rounded-4">
+
+                      <small className="text-muted">
+                        Phone
+                      </small>
+
+                      <h5 className="fw-bold mt-2 mb-0">
+                        📞 {worker.user.phone}
+                      </h5>
+
+                    </div>
+
+                  </Col>
+
+                  <Col md={6}>
+
+                    <div className="p-3 bg-light rounded-4">
+
+                      <small className="text-muted">
+                        Location
+                      </small>
+
+                      <h5 className="fw-bold mt-2 mb-0">
+                        📍 {worker.city}
+                      </h5>
+
+                    </div>
+
+                  </Col>
+
+                </Row>
+
+                <hr className="my-4" />
+
+                <h4 className="fw-bold mb-3">
+                  Services Offered
+                </h4>
+
+                <div>
+
+                  {worker.services.map(
+                    (service, index) => (
+                      <Badge
+                        bg="primary"
+                        className="me-2 mb-2 px-3 py-2"
+                        key={index}
+                      >
+                        {service}
+                      </Badge>
+                    )
+                  )}
+
+                </div>
+
+              </Card.Body>
+
+            </Card>
+
+            {/* REVIEWS */}
+
+            <Card
+              className="border-0 shadow-sm rounded-4 mt-4"
+            >
+
+              <Card.Body className="p-4">
+
+                <h3 className="fw-bold mb-4">
+                  Customer Reviews
+                </h3>
+
+                {reviews.length === 0 ? (
+
+                  <div className="text-center py-4">
+
+                    <div
+                      style={{
+                        fontSize: "45px",
+                      }}
+                    >
+                      ⭐
+                    </div>
+
+                    <p className="text-muted mt-2">
+                      No reviews yet.
+                    </p>
+
+                  </div>
+
+                ) : (
+
+                  reviews.map((review) => (
+
+                    <Card
+                      key={review.id}
+                      className="border-0 bg-light rounded-4 mb-3"
+                    >
+
+                      <Card.Body>
+
+                        <div className="d-flex justify-content-between">
+
+                          <h5 className="fw-bold">
+                            ⭐ {review.rating}/5
+                          </h5>
+
+                        </div>
+
+                        <p className="mt-3 mb-2">
+                          {review.comment}
+                        </p>
+
+                        <small className="text-muted">
+                          By:{" "}
+                          <strong>
+                            {review.customer_name}
+                          </strong>
+                        </small>
+
+                        {!isAdmin && (
+
+                          <div className="mt-3">
+
+                            <Button
+                              variant="warning"
+                              size="sm"
+                              className="rounded-pill"
+                              onClick={() => {
+
+                                setIsEditing(true);
+
+                                setEditingReviewId(
+                                  review.id
+                                );
+
+                                setRating(
+                                  review.rating
+                                );
+
+                                setComment(
+                                  review.comment
+                                );
+
+                                window.scrollTo({
+                                  top: 0,
+                                  behavior: "smooth",
+                                });
+                              }}
+                            >
+                              Edit
+                            </Button>
+
+                            <Button
+                              variant="danger"
+                              size="sm"
+                              className="rounded-pill ms-2"
+                              onClick={() =>
+                                deleteReview(
+                                  review.id
+                                )
+                              }
+                            >
+                              Delete
+                            </Button>
+
+                          </div>
+
+                        )}
+
+                      </Card.Body>
+
+                    </Card>
+
+                  ))
+
+                )}
+
+              </Card.Body>
+
+            </Card>
+
+          </Col>
+
+          {/* REVIEW FORM */}
+
+          {!isAdmin && (
+
+            <Col lg={4}>
+
+              <Card
+                className="border-0 shadow-lg rounded-4 sticky-lg-top"
+                style={{
+                  top: "90px",
+                }}
+              >
+
+                <Card.Body className="p-4">
+
+                  <h4 className="fw-bold">
+                    {isEditing
+                      ? "Edit Your Review"
+                      : "Write a Review"}
+                  </h4>
+
+                  <p className="text-muted">
+                    Share your experience with this worker.
+                  </p>
+
+                  <Form
+                    className="mt-4"
+                    onSubmit={submitReview}
+                  >
+
+                    <Form.Group className="mb-3">
+
+                      <Form.Label>
+                        Rating
+                      </Form.Label>
+
+                      <Form.Select
+                        value={rating}
+                        onChange={(e) =>
+                          setRating(
+                            e.target.value
+                          )
+                        }
+                      >
+                        <option value="5">
+                          ⭐⭐⭐⭐⭐ (5)
+                        </option>
+
+                        <option value="4">
+                          ⭐⭐⭐⭐ (4)
+                        </option>
+
+                        <option value="3">
+                          ⭐⭐⭐ (3)
+                        </option>
+
+                        <option value="2">
+                          ⭐⭐ (2)
+                        </option>
+
+                        <option value="1">
+                          ⭐ (1)
+                        </option>
+
+                      </Form.Select>
+
+                    </Form.Group>
+
+                    <Form.Group className="mb-3">
+
+                      <Form.Label>
+                        Comment
+                      </Form.Label>
+
+                      <Form.Control
+                        as="textarea"
+                        rows={5}
+                        value={comment}
+                        onChange={(e) =>
+                          setComment(
+                            e.target.value
+                          )
+                        }
+                        placeholder="Write your review..."
+                      />
+
+                    </Form.Group>
+
+                    <Button
+                      variant={
+                        isEditing
+                          ? "warning"
+                          : "primary"
+                      }
+                      type="submit"
+                      className="w-100 rounded-pill fw-semibold"
+                    >
+                      {isEditing
+                        ? "Update Review"
+                        : "Submit Review"}
+                    </Button>
+
+                    {isEditing && (
+
+                      <Button
+                        variant="outline-secondary"
+                        className="w-100 rounded-pill mt-2"
+                        onClick={() => {
+
+                          setIsEditing(false);
+                          setEditingReviewId(null);
+                          setRating(5);
+                          setComment("");
+
+                        }}
+                      >
+                        Cancel Edit
+                      </Button>
+
+                    )}
+
+                  </Form>
+
+                </Card.Body>
+
+              </Card>
+
+            </Col>
+
+          )}
+
+        </Row>
+
+      </Container>
+    </>
+  );
 }
 
 export default WorkerProfile;
