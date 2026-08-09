@@ -118,6 +118,14 @@ class Notification(models.Model):
         related_name="notifications"
     )
 
+    booking = models.ForeignKey(
+        "Booking",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="notifications"
+    )
+
     message = models.CharField(max_length=255)
 
     is_read = models.BooleanField(default=False)

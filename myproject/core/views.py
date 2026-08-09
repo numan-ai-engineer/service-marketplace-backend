@@ -100,6 +100,7 @@ class BookingViewSet(viewsets.ModelViewSet):
         )
         Notification.objects.create(
     user=worker.user,
+    booking=serializer.instance,
     message=f"You have received a new booking for {service_obj.name} service."
 )
 
@@ -315,12 +316,14 @@ def notifications(request):
     data = []
 
     for notification in notifications:
-        data.append({
-            "id": notification.id,
-            "message": notification.message,
-            "is_read": notification.is_read,
-            "created_at": notification.created_at,
-        })
+     data.append({
+    "id": notification.id,
+    "message": notification.message,
+    "is_read": notification.is_read,
+    "created_at": notification.created_at,
+    "booking_id": notification.booking.id
+        if notification.booking else None,
+})
 
     return Response(data)
 @api_view(["GET"])

@@ -1,9 +1,12 @@
+import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Container, Card, Badge } from "react-bootstrap";
 import api from "../utils/api";
 
 function Notifications() {
-  const [notifications, setNotifications] = useState([]);
+  const navigate = useNavigate();
+
+const [notifications, setNotifications] = useState([]);
 
   useEffect(() => {
     loadNotifications();
@@ -18,7 +21,7 @@ function Notifications() {
       },
     });
 
-    console.log(response);
+    console.log("NOTIFICATIONS:", response.data);
 
       setNotifications(response.data);
     
@@ -33,10 +36,22 @@ function Notifications() {
         <h5>No Notifications</h5>
       ) : (
         notifications.map((notification) => (
-          <Card
-            key={notification.id}
-            className="shadow p-3 mb-3"
-          >
+         <Card
+  key={notification.id}
+  onClick={() => {
+  console.log("CLICKED NOTIFICATION:", notification);
+  
+  if (notification.booking_id) {
+    console.log("BOOKING ID:", notification.booking_id);
+    navigate("/worker-dashboard");
+  }
+}}
+  className={`shadow p-3 mb-3 ${
+    notification.booking_id
+      ? "cursor-pointer hover:shadow-lg"
+      : ""
+  }`}
+>
             <h5>{notification.message}</h5>
 
             <p>

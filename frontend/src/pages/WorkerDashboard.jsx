@@ -58,12 +58,14 @@ function WorkerDashboard() {
       );
     },
     (error) => {
-      console.log(error);
-    },
+  console.log("LOCATION ERROR CODE:", error.code);
+  console.log("LOCATION ERROR MESSAGE:", error.message);
+  console.log("FULL LOCATION ERROR:", error);
+},
     {
       enableHighAccuracy: true,
       maximumAge: 0,
-      timeout: 5000,
+      timeout: 30000,
     }
   );
 
