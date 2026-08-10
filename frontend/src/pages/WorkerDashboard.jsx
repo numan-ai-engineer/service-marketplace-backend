@@ -4,6 +4,8 @@ import GoogleMapComponent from "../components/GoogleMap";
 function WorkerDashboard() {
   const [dashboard, setDashboard] = useState(null);
 
+  const [workers, setWorkers] = useState([]);
+
   const [isOnline, setIsOnline] = useState(false);
 
   const [verification, setVerification] = useState({
@@ -38,10 +40,27 @@ function WorkerDashboard() {
 
   const data = await response.json();
 
-  setDashboard(data);
-  setIsOnline(data.is_online);
-};
+setDashboard(data);
+setIsOnline(data.is_online);
 
+// Load online workers for Google Map
+const workersResponse = await fetch(
+  "http://127.0.0.1:8000/api/workers/",
+  {
+    headers: {
+      Authorization: "Bearer " + token,
+    },
+  }
+);
+
+if (workersResponse.ok) {
+  const workersData = await workersResponse.json();
+
+  console.log("DASHBOARD WORKERS:", workersData);
+
+  setWorkers(workersData);
+}
+};
 
 // =========================
 // LOAD DASHBOARD EVERY 10 SECONDS
@@ -269,7 +288,7 @@ return (
     📍 Live Worker Location
   </h2>
 
-  <GoogleMapComponent />
+  <GoogleMapComponent workers={workers} />
 </div>
 
       <div>
