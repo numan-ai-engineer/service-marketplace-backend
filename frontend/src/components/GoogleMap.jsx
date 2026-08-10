@@ -9,11 +9,6 @@ const containerStyle = {
   height: "500px",
 };
 
-const center = {
-  lat: 31.5204,
-  lng: 74.3587,
-};
-
 function GoogleMapComponent({ workers = [] }) {
   const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
@@ -39,11 +34,25 @@ function GoogleMapComponent({ workers = [] }) {
     );
   }
 
+  // Worker کی موجودہ location
+  const workerLocation =
+    workers.length > 0 &&
+    workers[0].latitude &&
+    workers[0].longitude
+      ? {
+          lat: Number(workers[0].latitude),
+          lng: Number(workers[0].longitude),
+        }
+      : {
+          lat: 31.5204,
+          lng: 74.3587,
+        };
+
   return (
     <GoogleMap
       mapContainerStyle={containerStyle}
-      center={center}
-      zoom={12}
+      center={workerLocation}
+      zoom={15}
     >
       {workers.map((worker) => (
         <Marker

@@ -124,35 +124,38 @@ class ReviewViewSet(viewsets.ModelViewSet):
             )
 
         return review
-def perform_create(self, serializer):
-    booking_id = self.request.data.get("booking")
 
-    booking = get_object_or_404(
-        Booking,
-        id=booking_id
-    )
+    def perform_create(self, serializer):
 
-    worker_profile = get_object_or_404(
-        WorkerProfile,
-        user=booking.worker
-    )
+        booking_id = self.request.data.get("booking")
 
-    serializer.save(
-        customer=self.request.user,
-        worker=worker_profile,
-        booking=booking,
-    )
+        booking = get_object_or_404(
+            Booking,
+            id=booking_id
+        )
 
-    average_rating = Review.objects.filter(
-        worker=worker_profile
-    ).aggregate(
-        Avg("rating")
-    )
+        worker_profile = get_object_or_404(
+            WorkerProfile,
+            user=booking.worker
+        )
 
-    worker_profile.rating = average_rating["rating__avg"] or 0
-    worker_profile.save()
+        serializer.save(
+            customer=self.request.user,
+            worker=worker_profile,
+            booking=booking,
+        )
+
+        average_rating = Review.objects.filter(
+            worker=worker_profile
+        ).aggregate(
+            Avg("rating")
+        )
+
+        worker_profile.rating = average_rating["rating__avg"] or 0
+        worker_profile.save()
 
     def perform_update(self, serializer):
+
         review = serializer.save()
 
         average_rating = Review.objects.filter(

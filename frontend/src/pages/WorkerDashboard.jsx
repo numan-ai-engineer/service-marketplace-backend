@@ -20,67 +20,55 @@ function WorkerDashboard() {
   });
 
   const loadDashboard = async () => {
-    const token = localStorage.getItem("access");
+  const token = localStorage.getItem("access");
 
-    const response = await fetch(
-      "http://127.0.0.1:8000/api/worker/dashboard/",
-      {
-        headers: {
-          Authorization: "Bearer " + token,
-        },
-      }
-    );
-
-    if (!response.ok) {
-      console.log(await response.text());
-      return;
+  const response = await fetch(
+    "http://127.0.0.1:8000/api/worker/dashboard/",
+    {
+      headers: {
+        Authorization: "Bearer " + token,
+      },
     }
+  );
 
-    const data = await response.json();
+  if (!response.ok) {
+    console.log(await response.text());
+    return;
+  }
 
-    setDashboard(data);
+  const data = await response.json();
 
-    setIsOnline(data.is_online);
-  };
+  setDashboard(data);
+  setIsOnline(data.is_online);
+};
 
-  useEffect(() => {
+
+// =========================
+// LOAD DASHBOARD EVERY 10 SECONDS
+// =========================
+
+useEffect(() => {
   loadDashboard();
 
   const interval = setInterval(() => {
     loadDashboard();
   }, 10000);
 
-  const watchId = navigator.geolocation.watchPosition(
-    (position) => {
-      updateLocation(
-        position.coords.latitude,
-        position.coords.longitude
-      );
-    },
-    (error) => {
-  console.log("LOCATION ERROR CODE:", error.code);
-  console.log("LOCATION ERROR MESSAGE:", error.message);
-  console.log("FULL LOCATION ERROR:", error);
-},
-    {
-      enableHighAccuracy: true,
-      maximumAge: 0,
-      timeout: 30000,
-    }
-  );
-
   return () => {
     clearInterval(interval);
-    navigator.geolocation.clearWatch(watchId);
   };
-
 }, []);
 
-  const updateLocation = async (latitude, longitude) => {
+
+// =========================
+// UPDATE WORKER LOCATION
+// =========================
+
+const updateLocation = async (latitude, longitude) => {
   const token = localStorage.getItem("access");
 
   try {
-    await fetch(
+    const response = await fetch(
       "http://127.0.0.1:8000/api/worker/update-location/",
       {
         method: "POST",
@@ -94,10 +82,70 @@ function WorkerDashboard() {
         }),
       }
     );
+
+    const data = await response.json();
+
+    console.log("LOCATION UPDATE STATUS:", response.status);
+    console.log("LOCATION UPDATE RESPONSE:", data);
+
   } catch (error) {
-    console.log(error);
+    console.log("Location Update Error:", error);
   }
 };
+
+
+// =========================
+// GPS LOCATION TRACKING
+// =========================
+
+useEffect(() => {
+  if (!navigator.geolocation) {
+    console.log(
+      "Geolocation is not supported by this browser."
+    );
+    return;
+  }
+
+  const watchId = navigator.geolocation.watchPosition(
+    (position) => {
+      const latitude = position.coords.latitude;
+      const longitude = position.coords.longitude;
+
+      console.log(
+        "GPS LOCATION:",
+        latitude,
+        longitude
+      );
+
+      updateLocation(
+        latitude,
+        longitude
+      );
+    },
+
+    (error) => {
+      console.log(
+        "GPS ERROR CODE:",
+        error.code
+      );
+
+      console.log(
+        "GPS ERROR MESSAGE:",
+        error.message
+      );
+    },
+
+    {
+      enableHighAccuracy: true,
+      maximumAge: 10000,
+      timeout: 30000,
+    }
+  );
+
+  return () => {
+    navigator.geolocation.clearWatch(watchId);
+  };
+}, []);
 
   const updateStatus = async (bookingId, status) => {
     const token = localStorage.getItem("access");

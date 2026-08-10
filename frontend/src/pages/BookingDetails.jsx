@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Container, Card, Badge } from "react-bootstrap";
+import { Container, Card, Badge, Button } from "react-bootstrap";
 
 function BookingDetails() {
   const { id } = useParams();
@@ -58,13 +58,15 @@ const [comment, setComment] = useState("");
 
         <h5 className="mt-3">
           <strong>Status:</strong>{" "}
-<Button
+{booking.status === "completed" && (
+  <Button
     className="mt-4"
     variant="primary"
     onClick={() => setShowReviewForm(true)}
->
+  >
     Give Review
-</Button>
+  </Button>
+)}
           <Badge bg="success">
             {booking.status}
           </Badge>

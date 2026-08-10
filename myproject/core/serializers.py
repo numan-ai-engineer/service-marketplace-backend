@@ -76,7 +76,9 @@ class BookingSerializer(serializers.ModelSerializer):
         data["booking_date"] = instance.created_at
         
         return data
-    # Review Serializer
+    # =========================
+# REVIEW SERIALIZER
+# =========================
 class ReviewSerializer(serializers.ModelSerializer):
     customer_name = serializers.CharField(
         source="customer.username",

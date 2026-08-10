@@ -24,6 +24,7 @@ function WorkerProfile() {
   const [comment, setComment] = useState("");
 
   const [bookingId, setBookingId] = useState("");
+  const [myReview, setMyReview] = useState(null);
 
   const [editingReviewId, setEditingReviewId] =
     useState(null);
@@ -98,46 +99,44 @@ function WorkerProfile() {
   };
 
   const loadBooking = async () => {
-    if (!worker) return;
+  if (!worker) return;
 
-    try {
-      const token =
-        localStorage.getItem("access");
+  try {
+    const response = await api.get("/bookings/");
 
-      const response = await api.get(
-        "/bookings/",
-        {
-          headers: {
-            Authorization:
-              "Bearer " + token,
-          },
-        }
+    console.log("Bookings:", response);
+
+    if (response.ok) {
+      const currentUser = JSON.parse(
+        localStorage.getItem("user")
       );
 
-      console.log("Bookings:", response);
+      const booking = response.data.find(
+        (b) =>
+          b.worker?.id === worker.user.id &&
+          b.customer?.id === currentUser?.id &&
+          b.status === "completed"
+      );
 
-      if (response.ok) {
-        const booking =
-          response.data.find(
-            (b) =>
-              b.worker.id ==
-                worker.user.id &&
-              b.status === "completed"
-          );
+      if (booking) {
+        setBookingId(booking.id);
 
-        if (booking) {
-          setBookingId(booking.id);
+        console.log(
+          "My Completed Booking ID:",
+          booking.id
+        );
+      } else {
+        setBookingId("");
 
-          console.log(
-            "Booking ID:",
-            booking.id
-          );
-        }
+        console.log(
+          "No completed booking found for this customer."
+        );
       }
-    } catch (error) {
-      console.log("Booking Error:", error);
     }
-  };
+  } catch (error) {
+    console.log("Booking Error:", error);
+  }
+};
 
   const submitReview = async (e) => {
     e.preventDefault();
