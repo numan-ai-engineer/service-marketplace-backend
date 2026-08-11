@@ -30,7 +30,7 @@ class WorkerProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = WorkerProfile
-        fields = '__all__'
+        fields = "__all__"
 
     def get_user(self, obj):
         return {
@@ -40,7 +40,13 @@ class WorkerProfileSerializer(serializers.ModelSerializer):
         }
 
     def get_services(self, obj):
-        return [service.name for service in obj.services.all()]
+        return [
+            {
+                "id": service.id,
+                "name": service.name,
+            }
+            for service in obj.services.all()
+        ]
 
 
 # =========================

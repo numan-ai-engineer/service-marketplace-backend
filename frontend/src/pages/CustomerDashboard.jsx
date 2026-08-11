@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import { Container, Card, Badge, Button } from "react-bootstrap";
 import api from "../utils/api";
+import GoogleMapComponent from "../components/GoogleMap";
 
 function CustomerDashboard() {
   const [dashboard, setDashboard] = useState(null);
+   const [workers, setWorkers] = useState([]);
+
 useEffect(() => {
   loadDashboard();
 }, []);
@@ -17,10 +20,122 @@ const loadDashboard = async () => {
     },
   });
 
-  console.log(response);
+  console.log("CUSTOMER DASHBOARD:", response);
 
-  if (response.ok) {
-    setDashboard(response.data);
+  setDashboard(response.data);
+
+  const workersResponse = await api.get("/workers/", {
+    headers: {
+      Authorization: "Bearer " + token,
+    },
+  });
+
+  console.log(
+    "CUSTOMER WORKERS:",
+    workersResponse.data
+  );
+
+  console.log("CUSTOMER WORKERS COUNT:", workersResponse.data.length);
+
+  setWorkers(workersResponse.data);
+};
+
+const bookWorker = async (worker) => {
+  const token = localStorage.getItem("access");
+
+  console.log("FULL WORKER OBJECT:", worker);
+console.log("WORKER SERVICES:", worker.services);
+
+  if (!worker.services || worker.services.length === 0) {
+    alert("This worker has no service available.");
+    return;
+  }
+
+  // Show available services
+  const serviceNames = worker.services
+    .map(
+      (service, index) =>
+        `${index + 1}. ${service.name}`
+    )
+    .join("\n");
+
+  const selectedNumber = window.prompt(
+    `Select a service:\n\n${serviceNames}\n\nEnter service number:`
+  );
+
+  if (selectedNumber === null) {
+    return;
+  }
+
+  const serviceIndex =
+    Number(selectedNumber) - 1;
+
+  if (
+    serviceIndex < 0 ||
+    serviceIndex >= worker.services.length
+  ) {
+    alert("Invalid service selection.");
+    return;
+  }
+
+  const service =
+    worker.services[serviceIndex];
+    console.log("SELECTED SERVICE OBJECT:", service);
+
+  console.log(
+    "BOOKING WORKER ID:",
+    worker.id
+  );
+
+  console.log(
+    "BOOKING SERVICE ID:",
+    service.id
+  );
+
+  try {
+    const response = await api.post(
+      "/bookings/",
+      {
+        worker: worker.id,
+        service: service.id,
+      },
+      {
+        headers: {
+          Authorization: "Bearer " + token,
+        },
+      }
+    );
+
+    console.log(
+      "BOOKING RESPONSE:",
+      response
+    );
+
+    if (response.ok) {
+      alert(
+        `Booking created successfully for ${service.name}!`
+      );
+
+      loadDashboard();
+    } else {
+      alert(
+        response.data?.error ||
+        response.data?.detail ||
+        "Booking Failed!"
+      );
+    }
+
+  } catch (error) {
+    console.log(
+      "BOOKING ERROR:",
+      error
+    );
+
+    alert(
+      error.response?.data?.error ||
+      error.response?.data?.detail ||
+      "Booking Failed!"
+    );
   }
 };
 
@@ -138,6 +253,21 @@ const getBadgeColor = (status) => {
   </div>
 
 </div>
+
+<div className="mb-5">
+
+  <h2 className="fw-bold mb-4">
+    📍 Nearby Online Workers
+  </h2>
+
+  <GoogleMapComponent
+  workers={workers}
+  showBookingButton={true}
+  onBookWorker={bookWorker}
+/>
+
+</div>
+
 <hr className="mb-4" />
 
 <h2 className="fw-bold mb-4">

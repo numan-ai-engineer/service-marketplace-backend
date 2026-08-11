@@ -12,7 +12,11 @@ const containerStyle = {
   height: "500px",
 };
 
-function GoogleMapComponent({ workers = [] }) {
+function GoogleMapComponent({
+  workers = [],
+  showBookingButton = false,
+  onBookWorker,
+}) {
   const [selectedWorker, setSelectedWorker] = useState(null);
 
   const { isLoaded, loadError } = useJsApiLoader({
@@ -79,6 +83,7 @@ function GoogleMapComponent({ workers = [] }) {
           onCloseClick={() => setSelectedWorker(null)}
         >
           <div className="p-2 min-w-[220px]">
+
             <h3 className="text-lg font-bold text-gray-800">
               👷 {selectedWorker.user?.name || "Worker"}
             </h3>
@@ -103,19 +108,39 @@ function GoogleMapComponent({ workers = [] }) {
             {selectedWorker.services &&
               selectedWorker.services.length > 0 && (
                 <div className="mt-2">
+
                   <p className="font-semibold text-gray-700">
                     Services:
                   </p>
 
                   <ul className="list-disc ml-5 text-gray-600">
-                    {selectedWorker.services.map((service) => (
-                      <li key={service.id}>
-                        {service.name}
-                      </li>
-                    ))}
+
+                    {selectedWorker.services.map((service, index) => (
+  <li key={service.id ?? index}>
+    {typeof service === "object" ? service.name : service}
+  </li>
+))}
                   </ul>
+
                 </div>
               )}
+
+            {showBookingButton && (
+              <button
+                onClick={() => {
+                  console.log(
+                    "BOOK WORKER CLICKED:",
+                    selectedWorker
+                  );
+
+                  onBookWorker(selectedWorker);
+                }}
+                className="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg"
+              >
+                📅 Book This Worker
+              </button>
+            )}
+
           </div>
         </InfoWindow>
       )}

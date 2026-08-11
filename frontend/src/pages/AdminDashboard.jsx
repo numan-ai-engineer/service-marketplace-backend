@@ -272,10 +272,10 @@ function AdminDashboard() {
 
 <ul>
     {worker.services.map((service, index) => (
-        <li key={index}>
-            {service}
-        </li>
-    ))}
+  <li key={service.id ?? index}>
+    {typeof service === "object" ? service.name : service}
+  </li>
+))}
 </ul>
 
             <h4>CNIC Front</h4>

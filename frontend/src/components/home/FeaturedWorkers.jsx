@@ -395,28 +395,26 @@ function FeaturedWorkers({
                 </div>
 
                 {/* SERVICES */}
-                <div className="mb-4">
 
-                  <span className="text-muted small d-block mb-2">
-                    Services
-                  </span>
+<div className="mb-4">
 
-                  {(
-                    worker.services || []
-                  ).map((service, index) => (
+  <span className="text-muted small d-block mb-2">
+    Services
+  </span>
 
-                    <Badge
-                      bg="light"
-                      text="primary"
-                      className="border me-2 mb-2 px-3 py-2"
-                      key={index}
-                    >
-                      {service}
-                    </Badge>
+{(worker.services || []).map((service, index) => (
+<Badge
+bg="light"
+text="primary"
+className="border me-2 mb-2 px-3 py-2"
+key={service?.id ?? index}
+>
+{typeof service === "object"
+? service?.name
+: service} </Badge>
+))}
 
-                  ))}
-
-                </div>
+</div>
 
                 {/* BUTTON */}
                 <Button

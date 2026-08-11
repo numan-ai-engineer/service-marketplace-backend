@@ -439,17 +439,15 @@ function WorkerProfile() {
 
                 <div>
 
-                  {worker.services.map(
-                    (service, index) => (
-                      <Badge
-                        bg="primary"
-                        className="me-2 mb-2 px-3 py-2"
-                        key={index}
-                      >
-                        {service}
-                      </Badge>
-                    )
-                  )}
+                  {worker.services.map((service, index) => (
+  <Badge
+    bg="primary"
+    className="me-2 mb-2 px-3 py-2"
+    key={service.id ?? index}
+  >
+    {typeof service === "object" ? service.name : service}
+  </Badge>
+))}
 
                 </div>
 

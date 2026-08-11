@@ -68,8 +68,9 @@ class WorkerProfileViewSet(viewsets.ModelViewSet):
 
 
 # =========================
-# BOOKING API (AUTO ASSIGN FIXED)
+# BOOKING API
 # =========================
+
 class BookingViewSet(viewsets.ModelViewSet):
     queryset = Booking.objects.all()
     serializer_class = BookingSerializer
@@ -77,36 +78,59 @@ class BookingViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
 
         service_id = self.request.data.get("service")
+        worker_id = self.request.data.get("worker")
 
         if not service_id:
-            raise ValidationError({"service": "Service is required"})
+            raise ValidationError({
+                "service": "Service is required"
+            })
 
-        service_obj = get_object_or_404( Service, id=service_id )
+        if not worker_id:
+            raise ValidationError({
+                "worker": "Worker is required"
+            })
 
-        worker = WorkerProfile.objects.filter(
-    services=service_obj,
-    is_available=True
-).first()
+        service_obj = get_object_or_404(
+            Service,
+            id=service_id
+        )
 
-        if not worker:
-            raise ValidationError(
-                {"error": "No worker found for this service"}
-            )
+        worker = get_object_or_404(
+            WorkerProfile,
+            id=worker_id,
+            is_available=True,
+            is_online=True,
+            is_verified=True,
+        )
+
+        if not worker.services.filter(
+            id=service_obj.id
+        ).exists():
+
+            raise ValidationError({
+                "error": "Worker does not provide this service"
+            })
 
         serializer.save(
             customer=self.request.user,
             worker=worker.user,
             service=service_obj,
         )
+
         Notification.objects.create(
-    user=worker.user,
-    booking=serializer.instance,
-    message=f"You have received a new booking for {service_obj.name} service."
-)
+            user=worker.user,
+            booking=serializer.instance,
+            message=(
+                f"You have received a new booking "
+                f"for {service_obj.name} service."
+            )
+        )
+
 
 # =========================
 # REVIEW API
 # =========================
+
 class ReviewViewSet(viewsets.ModelViewSet):
 
     permission_classes = [IsAuthenticated]
