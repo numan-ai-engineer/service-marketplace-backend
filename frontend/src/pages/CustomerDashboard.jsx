@@ -7,6 +7,11 @@ function CustomerDashboard() {
   const [dashboard, setDashboard] = useState(null);
    const [workers, setWorkers] = useState([]);
 
+     const [reviewBooking, setReviewBooking] = useState(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
+  const [showReviewForm, setShowReviewForm] = useState(false);
+
 useEffect(() => {
   loadDashboard();
 }, []);
@@ -111,7 +116,7 @@ console.log("WORKER SERVICES:", worker.services);
       response
     );
 
-    if (response.ok) {
+    if (response.status >= 200 && response.status < 300) {
       alert(
         `Booking created successfully for ${service.name}!`
       );
@@ -156,12 +161,10 @@ const cancelBooking = async (bookingId) => {
 
   console.log(response);
 
-  if (response.ok) {
-    alert("Booking Cancelled Successfully!");
-    loadDashboard();
-  } else {
-    alert("Cancel Failed!");
-  }
+  if (response.status >= 200 && response.status < 300) {
+  alert("Booking Cancelled Successfully!");
+  loadDashboard();
+}
 };
 
 if (!dashboard) {
@@ -321,10 +324,145 @@ style={{
 
     )}
 
+   {booking.status === "completed" && (
+  <Button
+    variant="warning"
+    className="ms-2"
+    onClick={() => {
+      setReviewBooking(booking);
+      setShowReviewForm(true);
+    }}
+  >
+    ⭐ Give Review
+  </Button>
+)}
+
+{reviewBooking?.id === booking.id && (
+  <div className="mt-4 p-4 bg-light rounded-4 border">
+    <h5 className="fw-bold mb-3">
+      ⭐ Review {booking.worker.name}
+    </h5>
+
+    <div className="mb-3">
+      <label className="form-label fw-semibold">
+        Rating
+      </label>
+
+      <select
+        className="form-select"
+        value={reviewRating}
+        onChange={(e) =>
+          setReviewRating(Number(e.target.value))
+        }
+      >
+        <option value={5}>⭐⭐⭐⭐⭐ 5 - Excellent</option>
+        <option value={4}>⭐⭐⭐⭐ 4 - Very Good</option>
+        <option value={3}>⭐⭐⭐ 3 - Good</option>
+        <option value={2}>⭐⭐ 2 - Average</option>
+        <option value={1}>⭐ 1 - Poor</option>
+      </select>
+    </div>
+
+    <div className="mb-3">
+      <label className="form-label fw-semibold">
+        Comment
+      </label>
+
+      <textarea
+        className="form-control"
+        rows="4"
+        value={reviewComment}
+        onChange={(e) =>
+          setReviewComment(e.target.value)
+        }
+        placeholder="Write your experience..."
+      />
+    </div>
+
+    <Button
+      variant="secondary"
+      onClick={() => setReviewBooking(null)}
+    >
+      Cancel
+    </Button>
+  </div>
+)}
+
 </Card>
 
 ))}
 
+{showReviewForm && reviewBooking && (
+  <Card className="shadow-lg border-0 rounded-4 p-4 mb-5">
+    <h3 className="fw-bold text-warning mb-4">
+      ⭐ Write a Review
+    </h3>
+
+    <p className="mb-3">
+      <strong>Booking:</strong> #{reviewBooking.id}
+    </p>
+
+    <p className="mb-4">
+      <strong>Worker:</strong>{" "}
+      {reviewBooking.worker.name}
+    </p>
+
+    <div className="mb-4">
+      <label className="form-label fw-bold">
+        Rating
+      </label>
+
+      <select
+        className="form-select"
+        value={reviewRating}
+        onChange={(e) =>
+          setReviewRating(Number(e.target.value))
+        }
+      >
+        <option value={5}>⭐⭐⭐⭐⭐ 5 - Excellent</option>
+        <option value={4}>⭐⭐⭐⭐ 4 - Very Good</option>
+        <option value={3}>⭐⭐⭐ 3 - Good</option>
+        <option value={2}>⭐⭐ 2 - Average</option>
+        <option value={1}>⭐ 1 - Poor</option>
+      </select>
+    </div>
+
+    <div className="mb-4">
+      <label className="form-label fw-bold">
+        Comment
+      </label>
+
+      <textarea
+        className="form-control"
+        rows="5"
+        value={reviewComment}
+        onChange={(e) =>
+          setReviewComment(e.target.value)
+        }
+        placeholder="Write your experience with this worker..."
+      />
+    </div>
+
+    <div className="d-flex gap-2">
+      <Button
+        variant="secondary"
+        onClick={() => {
+          setShowReviewForm(false);
+          setReviewBooking(null);
+        }}
+      >
+        Cancel
+      </Button>
+
+      <Button
+        variant="warning"
+        onClick={() => alert("Submit Review - Next Step")}
+      >
+        ⭐ Submit Review
+      </Button>
+    </div>
+  </Card>
+)}
     </Container>
   );
 }

@@ -25,6 +25,7 @@ function Register() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [city, setCity] = useState("");
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -53,7 +54,7 @@ function Register() {
   const handleRegister = async () => {
     alert("Button Click Working");
 
-    if (!fullName || !username || !email || !phone || !password || !confirmPassword) {
+    if (!fullName || !username || !email || !phone || !city || !password || !confirmPassword) {
       toast.error("Please fill all fields");
       return;
     }
@@ -80,6 +81,7 @@ try {
   password,
   phone,
   role,
+  city,
 })
     }
   );
@@ -221,6 +223,12 @@ alert(JSON.stringify(data));
             value={phone}
             onChange={(e)=>setPhone(e.target.value)}
           />
+
+          <Input
+  placeholder="City"
+  value={city}
+  onChange={(e) => setCity(e.target.value)}
+/>
 
           <div className="relative">
 

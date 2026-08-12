@@ -598,6 +598,7 @@ def register(request):
     phone = request.data.get("phone")
     role = request.data.get("role", "customer")
     first_name = request.data.get("first_name", "")
+    city = request.data.get("city", "")
 
     if User.objects.filter(username=username).exists():
         return Response(
@@ -617,6 +618,12 @@ def register(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    if role == "worker" and not city:
+        return Response(
+            {"error": "City is required for workers"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
     user = User.objects.create_user(
         username=username,
         email=email,
@@ -625,6 +632,12 @@ def register(request):
         role=role,
         first_name=first_name,
     )
+
+    if role == "worker":
+        WorkerProfile.objects.create(
+            user=user,
+            city=city,
+        )
 
     return Response(
         {"message": "Account Created Successfully"},
