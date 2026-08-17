@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
 from .serializers import WorkerVerificationSerializer
 from django.shortcuts import get_object_or_404
-from .ocr import extract_cnic
+from .ocr import extract_cnic_data
 from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.conf import settings
@@ -365,56 +365,154 @@ def notification_count(request):
     return Response({
         "count": count
     })
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def upload_verification(request):
 
-    print("UPLOAD API CALLED")
+    print("\n🔥🔥🔥 UPLOAD VERIFICATION HIT 🔥🔥🔥")
+    print("USER:", request.user.username)
+    print("DATA:", request.data)
+    print("FILES:", request.FILES)
 
-    worker = WorkerProfile.objects.get(user=request.user)
+    try:
+        worker = WorkerProfile.objects.get(
+            user=request.user
+        )
+    except WorkerProfile.DoesNotExist:
 
-    worker.cnic = request.data.get("cnic")
+        return Response(
+            {
+                "error": "Worker profile not found."
+            },
+            status=404,
+        )
 
-    if "cnic_front" in request.FILES:
-        worker.cnic_front = request.FILES["cnic_front"]
+    # =========================
+    # CNIC NUMBER
+    # =========================
+
+    cnic = request.data.get("cnic")
+
+    if not cnic:
+        return Response(
+            {
+                "error": "CNIC number is required."
+            },
+            status=400,
+        )
+
+    # Clean CNIC
+    cnic = (
+        str(cnic)
+        .replace("-", "")
+        .replace(" ", "")
+        .strip()
+    )
+
+    # Basic CNIC validation
+    if not cnic.isdigit() or len(cnic) != 13:
+
+        return Response(
+            {
+                "error": "CNIC must contain exactly 13 digits."
+            },
+            status=400,
+        )
+
+    worker.cnic = cnic
+
+    # =========================
+    # CNIC FRONT
+    # =========================
+
+    if "cnic_front" not in request.FILES:
+
+        return Response(
+            {
+                "error": "CNIC front image is required."
+            },
+            status=400,
+        )
+
+    worker.cnic_front = request.FILES[
+        "cnic_front"
+    ]
+
+    # =========================
+    # CNIC BACK
+    # =========================
 
     if "cnic_back" in request.FILES:
-        worker.cnic_back = request.FILES["cnic_back"]
 
-    if "selfie" in request.FILES:
-        worker.selfie = request.FILES["selfie"]
+        worker.cnic_back = request.FILES[
+            "cnic_back"
+        ]
 
-    # پہلے تصاویر Save کریں
-    worker.save()
+    # =========================
+    # SELFIE
+    # =========================
 
-    # OCR سے CNIC نمبر پڑھیں
-    scanned_cnic = extract_cnic(worker.cnic_front.path)
+    if "selfie" not in request.FILES:
 
-    print("Typed CNIC:", worker.cnic)
-    print("Scanned CNIC:", scanned_cnic)
-
-    if scanned_cnic is None:
         return Response(
             {
-                "error": "CNIC Number could not be detected from image."
+                "error": "Selfie is required."
             },
             status=400,
         )
 
-    if worker.cnic != scanned_cnic:
-        return Response(
-            {
-                "error": "CNIC Number does not match the uploaded card."
-            },
-            status=400,
-        )
+    worker.selfie = request.FILES[
+        "selfie"
+    ]
+
+    # =========================
+    # VERIFICATION STATUS
+    # =========================
 
     worker.verification_status = "pending"
+
+    # IMPORTANT:
+    # Worker is NOT automatically verified.
+    worker.is_verified = False
+
+    # =========================
+    # SAVE
+    # =========================
+
     worker.save()
 
-    return Response({
-        "message": "Verification uploaded successfully."
-    })
+    print("🔥 VERIFICATION SAVED")
+    print("🔥 WORKER:", worker.user.username)
+    print("🔥 CNIC:", worker.cnic)
+    print(
+        "🔥 STATUS:",
+        worker.verification_status
+    )
+    print(
+        "🔥 IS VERIFIED:",
+        worker.is_verified
+    )
+
+    # =========================
+    # RESPONSE
+    # =========================
+
+    return Response(
+        {
+            "message":
+                "Verification documents uploaded successfully. Waiting for admin approval.",
+
+            "cnic": worker.cnic,
+
+            "verification_status":
+                worker.verification_status,
+
+            "is_verified":
+                worker.is_verified,
+        },
+        status=200,
+    )
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
@@ -734,6 +832,8 @@ def reset_password(request, uidb64, token):
 def worker_online_status(request):
 
     print("REQUEST DATA:", request.data)
+    print("USER:", request.user)
+    print("USER ROLE:", request.user.role)
 
     if request.user.role != "worker":
         return Response(

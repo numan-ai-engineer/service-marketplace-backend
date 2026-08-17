@@ -30,12 +30,18 @@ class Service(models.Model):
 # Worker Profile
 class WorkerProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
+
     services = models.ManyToManyField(Service)
+
     city = models.CharField(max_length=100)
     experience_years = models.IntegerField(default=0)
     rating = models.FloatField(default=0)
 
-    cnic = models.CharField(max_length=15, blank=True)
+    cnic = models.CharField(
+        max_length=15,
+        blank=True,
+        null=True,
+    )
 
     cnic_front = models.ImageField(
         upload_to="verification/cnic_front/",

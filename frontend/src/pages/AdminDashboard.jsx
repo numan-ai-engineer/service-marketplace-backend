@@ -278,33 +278,63 @@ function AdminDashboard() {
 ))}
 </ul>
 
-            <h4>CNIC Front</h4>
+<h4>CNIC Front</h4>
 
-<img
-    src={worker.cnic_front}
-    alt="CNIC Front"
-    width="300"
-/>
+{worker.cnic_front ? (
+    <img
+        src={worker.cnic_front}
+        alt="CNIC Front"
+        width="300"
+        style={{
+            display: "block",
+            marginBottom: "20px",
+            borderRadius: "8px",
+            border: "1px solid #ccc",
+        }}
+    />
+) : (
+    <p>⚠️ CNIC Front not uploaded</p>
+)}
 
 <br /><br />
 
 <h4>CNIC Back</h4>
 
-<img
-    src={worker.cnic_back}
-    alt="CNIC Back"
-    width="300"
-/>
+{worker.cnic_back ? (
+    <img
+        src={worker.cnic_back}
+        alt="CNIC Back"
+        width="300"
+        style={{
+            display: "block",
+            marginBottom: "20px",
+            borderRadius: "8px",
+            border: "1px solid #ccc",
+        }}
+    />
+) : (
+    <p>⚠️ CNIC Back not uploaded</p>
+)}
 
 <br /><br />
 
 <h4>Selfie</h4>
 
-<img
-    src={worker.selfie}
-    alt="Selfie"
-    width="250"
-/>
+{worker.selfie ? (
+    <img
+        src={worker.selfie}
+        alt="Worker Selfie"
+        width="250"
+        style={{
+            display: "block",
+            marginBottom: "20px",
+            borderRadius: "8px",
+            border: "1px solid #ccc",
+        }}
+    />
+) : (
+    <p>⚠️ Selfie not uploaded</p>
+)}
 
 <br /><br />
 

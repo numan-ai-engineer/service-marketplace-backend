@@ -232,32 +232,93 @@ console.log("Sending:", !isOnline);
 };
 
   const uploadVerification = async () => {
-    const token = localStorage.getItem("access");
+  const token = localStorage.getItem("access");
 
-    const formData = new FormData();
+  console.log("🚀 UPLOAD VERIFICATION BUTTON CLICKED");
 
-    formData.append("cnic", verification.cnic);
-    formData.append("cnic_front", verification.cnic_front);
-    formData.append("cnic_back", verification.cnic_back);
-    formData.append("selfie", verification.selfie);
+  const formData = new FormData();
 
+  formData.append("cnic", verification.cnic);
+
+  if (verification.cnic_front) {
+    formData.append(
+      "cnic_front",
+      verification.cnic_front
+    );
+  }
+
+  if (verification.cnic_back) {
+    formData.append(
+      "cnic_back",
+      verification.cnic_back
+    );
+  }
+
+  if (verification.selfie) {
+    formData.append(
+      "selfie",
+      verification.selfie
+    );
+  }
+
+  console.log("CNIC:", verification.cnic);
+  console.log("CNIC FRONT:", verification.cnic_front);
+  console.log("CNIC BACK:", verification.cnic_back);
+  console.log("SELFIE:", verification.selfie);
+
+  try {
     const response = await fetch(
       "http://127.0.0.1:8000/api/worker/upload-verification/",
       {
         method: "POST",
+
         headers: {
           Authorization: "Bearer " + token,
         },
+
         body: formData,
       }
     );
 
+    console.log(
+      "UPLOAD RESPONSE STATUS:",
+      response.status
+    );
+
     const data = await response.json();
 
-    alert(data.message || data.error);
+    console.log(
+      "UPLOAD RESPONSE DATA:",
+      data
+    );
 
-    loadDashboard();
-  };
+    if (response.ok) {
+      alert(
+        data.message ||
+        "Verification uploaded successfully."
+      );
+
+      loadDashboard();
+    } else {
+      alert(
+        data.error ||
+        data.detail ||
+        "Verification upload failed."
+      );
+    }
+
+  } catch (error) {
+
+    console.error(
+      "UPLOAD VERIFICATION ERROR:",
+      error
+    );
+
+    alert(
+      "Server Error. Please try again."
+    );
+  }
+};
 
 if (!dashboard) {
   return (
