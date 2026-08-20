@@ -24,6 +24,7 @@ from .views import (
      update_worker_location,
      worker_location,
      customer_location,
+     nearby_workers,
 )
 
 from .views import register
@@ -124,6 +125,15 @@ path(
 path(
     "customer/location/",
     customer_location,
+),
+
+# =========================================================
+# NEARBY WORKERS
+# =========================================================
+
+path(
+    "customer/nearby-workers/",
+    nearby_workers,
 ),
 
     # Router URLs

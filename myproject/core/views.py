@@ -16,6 +16,7 @@ from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_decode
 from django.contrib.auth.hashers import make_password
 from django.utils.encoding import force_str
+from math import radians, sin, cos, sqrt, atan2
 
 
 from .models import ( User, Service, WorkerProfile, WorkerLocation, WorkerVerification, Booking, Review, Notification, CustomerLocation, )
@@ -1085,4 +1086,144 @@ def customer_location(request):
             if created
             else status.HTTP_200_OK
         ),
+    )
+
+# =========================================================
+# NEARBY WORKERS API
+# =========================================================
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def nearby_workers(request):
+
+    # -----------------------------------------------------
+    # CUSTOMER ONLY
+    # -----------------------------------------------------
+
+    if request.user.role != "customer":
+        return Response(
+            {
+                "error": "Only customers can access nearby workers."
+            },
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    # -----------------------------------------------------
+    # GET CUSTOMER LOCATION
+    # -----------------------------------------------------
+
+    try:
+        customer_location = CustomerLocation.objects.get(
+            customer=request.user
+        )
+
+    except CustomerLocation.DoesNotExist:
+        return Response(
+            {
+                "error": "Customer location not found. Please update your location first."
+            },
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    customer_lat = float(customer_location.latitude)
+    customer_lon = float(customer_location.longitude)
+
+    # -----------------------------------------------------
+    # SEARCH RADIUS
+    # Default = 5 KM
+    # -----------------------------------------------------
+
+    radius_km = float(request.query_params.get("radius", 5))
+
+    # -----------------------------------------------------
+    # GET ONLINE + AVAILABLE + VERIFIED WORKERS
+    # -----------------------------------------------------
+
+    workers = WorkerProfile.objects.filter(
+        is_online=True,
+        is_available=True,
+        is_verified=True,
+    ).select_related("user").prefetch_related("location")
+
+    nearby = []
+
+    # -----------------------------------------------------
+    # CALCULATE DISTANCE
+    # -----------------------------------------------------
+
+    for worker in workers:
+
+        try:
+            worker_location = worker.location
+        except WorkerLocation.DoesNotExist:
+            continue
+
+        worker_lat = float(worker_location.latitude)
+        worker_lon = float(worker_location.longitude)
+
+        # Convert degrees to radians
+        lat1 = radians(customer_lat)
+        lon1 = radians(customer_lon)
+        lat2 = radians(worker_lat)
+        lon2 = radians(worker_lon)
+
+        # Haversine formula
+        dlat = lat2 - lat1
+        dlon = lon2 - lon1
+
+        a = (
+            sin(dlat / 2) ** 2
+            + cos(lat1)
+            * cos(lat2)
+            * sin(dlon / 2) ** 2
+        )
+
+        c = 2 * atan2(sqrt(a), sqrt(1 - a))
+
+        # Earth's radius in KM
+        distance_km = 6371 * c
+
+        # -------------------------------------------------
+        # RADIUS FILTER
+        # -------------------------------------------------
+
+        if distance_km <= radius_km:
+
+            nearby.append(
+                {
+                    "worker_id": worker.id,
+                    "worker": worker.user.username,
+                    "city": worker.city,
+                    "experience_years": worker.experience_years,
+                    "rating": worker.rating,
+                    "distance_km": round(distance_km, 2),
+                    "latitude": str(worker_location.latitude),
+                    "longitude": str(worker_location.longitude),
+                    "accuracy": worker_location.accuracy,
+                    "speed": worker_location.speed,
+                    "heading": worker_location.heading,
+                    "updated_at": worker_location.updated_at,
+                }
+            )
+
+    # -----------------------------------------------------
+    # SORT BY DISTANCE
+    # -----------------------------------------------------
+
+    nearby.sort(
+        key=lambda worker: worker["distance_km"]
+    )
+
+    # -----------------------------------------------------
+    # RESPONSE
+    # -----------------------------------------------------
+
+    return Response(
+        {
+            "customer": request.user.username,
+            "radius_km": radius_km,
+            "count": len(nearby),
+            "workers": nearby,
+        },
+        status=status.HTTP_200_OK,
     )
