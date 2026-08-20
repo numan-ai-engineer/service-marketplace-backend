@@ -18,9 +18,9 @@ from django.contrib.auth.hashers import make_password
 from django.utils.encoding import force_str
 
 
-from .models import ( User, Service, WorkerProfile, WorkerLocation, WorkerVerification, Booking, Review, Notification, )
+from .models import ( User, Service, WorkerProfile, WorkerLocation, WorkerVerification, Booking, Review, Notification, CustomerLocation, )
 from .serializers import ( UserSerializer, ServiceSerializer, WorkerProfileSerializer, BookingSerializer, 
-ReviewSerializer, WorkerVerificationSerializer, WorkerLocationSerializer, )
+ReviewSerializer, WorkerVerificationSerializer, WorkerLocationSerializer, CustomerLocationSerializer, )
 
 # =========================
 # USER API
@@ -1005,4 +1005,84 @@ def worker_location(request):
             "location": serializer.data,
         },
         status=status.HTTP_200_OK,
+    )
+
+# =========================================================
+# CUSTOMER LOCATION API
+# =========================================================
+
+@api_view(["POST", "GET"])
+@permission_classes([IsAuthenticated])
+def customer_location(request):
+
+    # CUSTOMER ONLY
+    if request.user.role != "customer":
+        return Response(
+            {
+                "error": "Only customers can access this endpoint."
+            },
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    # GET LOCATION
+    if request.method == "GET":
+
+        try:
+            location = CustomerLocation.objects.get(
+                customer=request.user
+            )
+
+        except CustomerLocation.DoesNotExist:
+            return Response(
+                {
+                    "error": "Customer location not found."
+                },
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        serializer = CustomerLocationSerializer(location)
+
+        return Response(
+            {
+                "customer": request.user.username,
+                "location": serializer.data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    # POST LOCATION
+
+    serializer = CustomerLocationSerializer(
+        data=request.data
+    )
+
+    if not serializer.is_valid():
+        return Response(
+            serializer.errors,
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    location, created = CustomerLocation.objects.update_or_create(
+        customer=request.user,
+        defaults=serializer.validated_data,
+    )
+
+    response_serializer = CustomerLocationSerializer(
+        location
+    )
+
+    return Response(
+        {
+            "message": (
+                "Customer location created successfully."
+                if created
+                else "Customer location updated successfully."
+            ),
+            "location": response_serializer.data,
+        },
+        status=(
+            status.HTTP_201_CREATED
+            if created
+            else status.HTTP_200_OK
+        ),
     )

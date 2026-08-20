@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, Service, WorkerProfile, WorkerLocation, Booking, Review
+from .models import ( User, Service, WorkerProfile, Booking, Review, WorkerLocation, CustomerLocation, )
 
 
 # =========================
@@ -143,7 +143,7 @@ class BookingSerializer(serializers.ModelSerializer):
         data["booking_date"] = instance.created_at
         
         return data
-    # =========================
+# =========================
 # REVIEW SERIALIZER
 # =========================
 class ReviewSerializer(serializers.ModelSerializer):
@@ -188,6 +188,25 @@ class WorkerVerificationSerializer(serializers.ModelSerializer):
         read_only_fields = [
             "verification_status",
             "is_verified",
+        ]
+
+        # =========================================================
+# CUSTOMER LOCATION SERIALIZER
+# =================================================================
+class CustomerLocationSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = CustomerLocation
+
+        fields = [
+            "latitude",
+            "longitude",
+            "accuracy",
+            "updated_at",
+        ]
+
+        read_only_fields = [
+            "updated_at",
         ]
 
         # Register 

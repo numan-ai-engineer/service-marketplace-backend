@@ -204,6 +204,37 @@ class WorkerLocation(models.Model):
             f"{self.latitude}, {self.longitude}"
         )
 
+    # =========================================================
+# CUSTOMER LOCATION
+# =========================================================
+
+class CustomerLocation(models.Model):
+
+    customer = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name="location",
+    )
+
+    latitude = models.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+    )
+
+    longitude = models.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+    )
+
+    accuracy = models.FloatField(
+        null=True,
+        blank=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
 
 # =========================================================
 # WORKER VERIFICATION

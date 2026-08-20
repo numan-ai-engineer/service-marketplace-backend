@@ -23,6 +23,7 @@ from .views import (
      worker_online_status,
      update_worker_location,
      worker_location,
+     customer_location,
 )
 
 from .views import register
@@ -114,6 +115,15 @@ path(
 path(
     "worker/location/",
     worker_location,
+),
+
+# =========================================================
+# CUSTOMER LOCATION
+# =========================================================
+
+path(
+    "customer/location/",
+    customer_location,
 ),
 
     # Router URLs
