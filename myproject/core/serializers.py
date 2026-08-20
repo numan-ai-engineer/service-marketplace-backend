@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, Service, WorkerProfile, Booking, Review
+from .models import User, Service, WorkerProfile, WorkerLocation, Booking, Review
 
 
 # =========================
@@ -47,6 +47,67 @@ class WorkerProfileSerializer(serializers.ModelSerializer):
             }
             for service in obj.services.all()
         ]
+
+    # =========================================================
+# WORKER LOCATION SERIALIZER
+# =========================================================
+
+class WorkerLocationSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = WorkerLocation
+        fields = [
+            "latitude",
+            "longitude",
+            "accuracy",
+            "speed",
+            "heading",
+            "updated_at",
+        ]
+
+        read_only_fields = [
+            "updated_at",
+        ]
+
+    def validate_latitude(self, value):
+        if value < -90 or value > 90:
+            raise serializers.ValidationError(
+                "Latitude must be between -90 and 90."
+            )
+
+        return value
+
+    def validate_longitude(self, value):
+        if value < -180 or value > 180:
+            raise serializers.ValidationError(
+                "Longitude must be between -180 and 180."
+            )
+
+        return value
+
+    def validate_accuracy(self, value):
+        if value is not None and value < 0:
+            raise serializers.ValidationError(
+                "Accuracy cannot be negative."
+            )
+
+        return value
+
+    def validate_speed(self, value):
+        if value is not None and value < 0:
+            raise serializers.ValidationError(
+                "Speed cannot be negative."
+            )
+
+        return value
+
+    def validate_heading(self, value):
+        if value is not None and (value < 0 or value > 360):
+            raise serializers.ValidationError(
+                "Heading must be between 0 and 360 degrees."
+            )
+
+        return value
 
 
 # =========================

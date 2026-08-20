@@ -22,6 +22,7 @@ from .views import (
     reset_password,
      worker_online_status,
      update_worker_location,
+     worker_location,
 )
 
 from .views import register
@@ -105,6 +106,15 @@ path(
         "worker/profile/<int:pk>/",
         worker_profile,
     ),
+
+    # =========================================================
+# PROFESSIONAL WORKER LOCATION
+# =========================================================
+
+path(
+    "worker/location/",
+    worker_location,
+),
 
     # Router URLs
     path("", include(router.urls)),

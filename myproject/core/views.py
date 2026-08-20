@@ -18,9 +18,9 @@ from django.contrib.auth.hashers import make_password
 from django.utils.encoding import force_str
 
 
-from .models import User, Service, WorkerProfile, Booking, Review, Notification
+from .models import ( User, Service, WorkerProfile, WorkerLocation, WorkerVerification, Booking, Review, Notification, )
 from .serializers import ( UserSerializer, ServiceSerializer, WorkerProfileSerializer, BookingSerializer, 
-ReviewSerializer, )
+ReviewSerializer, WorkerVerificationSerializer, WorkerLocationSerializer, )
 
 # =========================
 # USER API
@@ -375,10 +375,15 @@ def upload_verification(request):
     print("DATA:", request.data)
     print("FILES:", request.FILES)
 
+    # =====================================================
+    # GET WORKER PROFILE
+    # =====================================================
+
     try:
         worker = WorkerProfile.objects.get(
             user=request.user
         )
+
     except WorkerProfile.DoesNotExist:
 
         return Response(
@@ -388,13 +393,14 @@ def upload_verification(request):
             status=404,
         )
 
-    # =========================
+    # =====================================================
     # CNIC NUMBER
-    # =========================
+    # =====================================================
 
     cnic = request.data.get("cnic")
 
     if not cnic:
+
         return Response(
             {
                 "error": "CNIC number is required."
@@ -402,7 +408,6 @@ def upload_verification(request):
             status=400,
         )
 
-    # Clean CNIC
     cnic = (
         str(cnic)
         .replace("-", "")
@@ -410,7 +415,10 @@ def upload_verification(request):
         .strip()
     )
 
-    # Basic CNIC validation
+    # =====================================================
+    # CNIC VALIDATION
+    # =====================================================
+
     if not cnic.isdigit() or len(cnic) != 13:
 
         return Response(
@@ -420,11 +428,9 @@ def upload_verification(request):
             status=400,
         )
 
-    worker.cnic = cnic
-
-    # =========================
+    # =====================================================
     # CNIC FRONT
-    # =========================
+    # =====================================================
 
     if "cnic_front" not in request.FILES:
 
@@ -435,23 +441,17 @@ def upload_verification(request):
             status=400,
         )
 
-    worker.cnic_front = request.FILES[
-        "cnic_front"
-    ]
+    cnic_front = request.FILES["cnic_front"]
 
-    # =========================
+    # =====================================================
     # CNIC BACK
-    # =========================
+    # =====================================================
 
-    if "cnic_back" in request.FILES:
+    cnic_back = request.FILES.get("cnic_back")
 
-        worker.cnic_back = request.FILES[
-            "cnic_back"
-        ]
-
-    # =========================
+    # =====================================================
     # SELFIE
-    # =========================
+    # =====================================================
 
     if "selfie" not in request.FILES:
 
@@ -462,48 +462,75 @@ def upload_verification(request):
             status=400,
         )
 
-    worker.selfie = request.FILES[
-        "selfie"
-    ]
+    selfie = request.FILES["selfie"]
 
-    # =========================
-    # VERIFICATION STATUS
-    # =========================
+    # =====================================================
+    # SAVE TO WORKER PROFILE
+    # =====================================================
+
+    worker.cnic = cnic
+
+    worker.cnic_front = cnic_front
+
+    if cnic_back:
+        worker.cnic_back = cnic_back
+
+    worker.selfie = selfie
 
     worker.verification_status = "pending"
 
-    # IMPORTANT:
-    # Worker is NOT automatically verified.
     worker.is_verified = False
-
-    # =========================
-    # SAVE
-    # =========================
 
     worker.save()
 
-    print("🔥 VERIFICATION SAVED")
+    print("🔥 WORKER PROFILE SAVED")
     print("🔥 WORKER:", worker.user.username)
     print("🔥 CNIC:", worker.cnic)
-    print(
-        "🔥 STATUS:",
-        worker.verification_status
-    )
-    print(
-        "🔥 IS VERIFIED:",
-        worker.is_verified
+
+    # =====================================================
+    # CREATE VERIFICATION RECORD
+    # =====================================================
+
+    verification = WorkerVerification.objects.create(
+
+        worker=worker,
+
+        country="Pakistan",
+
+        document_type="cnic",
+
+        document_number=cnic,
+
+        document_front=cnic_front,
+
+        document_back=cnic_back,
+
+        selfie=selfie,
+
+        status="pending",
+
     )
 
-    # =========================
+    print(
+        "🔥 VERIFICATION RECORD CREATED:",
+        verification.id
+    )
+
+    # =====================================================
     # RESPONSE
-    # =========================
+    # =====================================================
 
     return Response(
         {
             "message":
-                "Verification documents uploaded successfully. Waiting for admin approval.",
+                "Verification documents uploaded successfully. "
+                "Waiting for admin approval.",
 
-            "cnic": worker.cnic,
+            "verification_id":
+                verification.id,
+
+            "cnic":
+                cnic,
 
             "verification_status":
                 worker.verification_status,
@@ -621,30 +648,39 @@ def verify_worker(request, pk):
 
     worker = get_object_or_404(
         WorkerProfile,
-        id=pk
+        id=pk,
     )
 
     action = request.data.get("action")
 
     if action == "approve":
+
         worker.verification_status = "approved"
         worker.is_verified = True
 
+        worker.save()
+
+        return Response({
+            "message": "Worker approved successfully.",
+        })
+
     elif action == "reject":
+
         worker.verification_status = "rejected"
         worker.is_verified = False
 
+        worker.save()
+
+        return Response({
+            "message": "Worker rejected successfully.",
+        })
+
     else:
+
         return Response(
             {"error": "Invalid action"},
             status=400,
         )
-
-    worker.save()
-
-    return Response({
-        "message": f"Worker {action}d successfully."
-    })
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
@@ -880,3 +916,93 @@ def update_worker_location(request):
     return Response({
         "message": "Location Updated"
     })
+
+# =========================================================
+# WORKER LOCATION API
+# =========================================================
+
+@api_view(["POST", "GET"])
+@permission_classes([IsAuthenticated])
+def worker_location(request):
+
+    if request.user.role != "worker":
+        return Response(
+            {
+                "error": "Only workers can access location."
+            },
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    try:
+        worker = WorkerProfile.objects.get(
+            user=request.user
+        )
+
+    except WorkerProfile.DoesNotExist:
+        return Response(
+            {
+                "error": "Worker profile not found."
+            },
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    if request.method == "POST":
+
+        serializer = WorkerLocationSerializer(
+            data=request.data
+        )
+
+        if serializer.is_valid():
+
+            location, created = (
+                WorkerLocation.objects.update_or_create(
+                    worker=worker,
+                    defaults=serializer.validated_data,
+                )
+            )
+
+            response_serializer = WorkerLocationSerializer(
+                location
+            )
+
+            return Response(
+                {
+                    "message": (
+                        "Worker location updated successfully."
+                    ),
+                    "location": response_serializer.data,
+                },
+                status=(
+                    status.HTTP_201_CREATED
+                    if created
+                    else status.HTTP_200_OK
+                ),
+            )
+
+        return Response(
+            serializer.errors,
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        location = WorkerLocation.objects.get(
+            worker=worker
+        )
+
+    except WorkerLocation.DoesNotExist:
+        return Response(
+            {
+                "message": "Worker location not found."
+            },
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    serializer = WorkerLocationSerializer(location)
+
+    return Response(
+        {
+            "worker": request.user.username,
+            "location": serializer.data,
+        },
+        status=status.HTTP_200_OK,
+    )
