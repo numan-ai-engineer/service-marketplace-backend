@@ -736,15 +736,28 @@ className="w-full border rounded-xl p-3 focus:ring-2 focus:ring-blue-500"
       <div className="mt-8">
 
         {booking.status === "pending" && (
-          <button
-            onClick={() =>
-              updateStatus(booking.id, "accepted")
-            }
-            className="w-full bg-green-600 hover:bg-green-700 text-white rounded-2xl py-3 font-bold shadow-md"
-          >
-            ✅ Accept Booking
-          </button>
-        )}
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+
+    <button
+      onClick={() =>
+        updateStatus(booking.id, "accepted")
+      }
+      className="w-full bg-green-600 hover:bg-green-700 text-white rounded-2xl py-3 font-bold shadow-md"
+    >
+      ✅ Accept Booking
+    </button>
+
+    <button
+      onClick={() =>
+        updateStatus(booking.id, "rejected")
+      }
+      className="w-full bg-red-600 hover:bg-red-700 text-white rounded-2xl py-3 font-bold shadow-md"
+    >
+      ❌ Reject Booking
+    </button>
+
+  </div>
+)}
 
         {booking.status === "accepted" && (
           <button

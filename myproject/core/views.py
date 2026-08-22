@@ -211,60 +211,157 @@ def test_protected(request):
 @api_view(["PATCH"])
 @permission_classes([IsAuthenticated])
 def update_booking_status(request, pk):
-    try:
-        booking = Booking.objects.get(pk=pk)
 
-        new_status = request.data.get("status")
+    booking = get_object_or_404(
+        Booking,
+        pk=pk,
+    )
 
-        # Customer can cancel only own pending booking
-        if new_status == "cancelled":
+    new_status = request.data.get("status")
 
-            if booking.customer != request.user:
-                return Response(
-                    {"error": "You can cancel only your own booking."},
-                    status=403
-                )
+    # -----------------------------------------------------
+    # CUSTOMER CANCEL
+    # -----------------------------------------------------
 
-            if booking.status != "pending":
-                return Response(
-                    {"error": "Only pending bookings can be cancelled."},
-                    status=400
-                )
+    if new_status == "cancelled":
 
-            booking.status = "cancelled"
-            booking.save()
-
-            return Response({
-                "message": "Booking cancelled successfully.",
-                "status": booking.status
-            })
-
-        # Worker can accept / reject / complete
-        if booking.worker != request.user:
+        if booking.customer != request.user:
             return Response(
-                {"error": "You are not allowed to update this booking."},
-                status=403
+                {
+                    "error": "You can cancel only your own booking."
+                },
+                status=status.HTTP_403_FORBIDDEN,
             )
 
-        if new_status not in ["accepted", "rejected", "completed"]:
+        if booking.status != "pending":
             return Response(
-                {"error": "Invalid status."},
-                status=400
+                {
+                    "error": (
+                        "Only pending bookings can be cancelled."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
-        booking.status = new_status
-        booking.save()
+        booking.status = "cancelled"
+        booking.save(update_fields=["status"])
 
-        return Response({
-            "message": "Booking updated successfully.",
-            "status": booking.status
-        })
-
-    except Booking.DoesNotExist:
         return Response(
-            {"error": "Booking not found."},
-            status=404
+            {
+                "message": "Booking cancelled successfully.",
+                "status": booking.status,
+            },
+            status=status.HTTP_200_OK,
         )
+
+    # -----------------------------------------------------
+    # WORKER ONLY
+    # -----------------------------------------------------
+
+    if booking.worker != request.user:
+        return Response(
+            {
+                "error": (
+                    "You are not allowed to update this booking."
+                )
+            },
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    # -----------------------------------------------------
+    # ACCEPT
+    # -----------------------------------------------------
+
+    if new_status == "accepted":
+
+        if booking.status != "pending":
+            return Response(
+                {
+                    "error": (
+                        "Only pending bookings can be accepted."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        booking.status = "accepted"
+        booking.save(update_fields=["status"])
+
+        return Response(
+            {
+                "message": "Booking accepted successfully.",
+                "status": booking.status,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    # -----------------------------------------------------
+    # REJECT
+    # -----------------------------------------------------
+
+    if new_status == "rejected":
+
+        if booking.status != "pending":
+            return Response(
+                {
+                    "error": (
+                        "Only pending bookings can be rejected."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        booking.status = "rejected"
+        booking.save(update_fields=["status"])
+
+        return Response(
+            {
+                "message": "Booking rejected successfully.",
+                "status": booking.status,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    # -----------------------------------------------------
+    # COMPLETE
+    # -----------------------------------------------------
+
+    if new_status == "completed":
+
+        if booking.status != "accepted":
+            return Response(
+                {
+                    "error": (
+                        "Only accepted bookings can be completed."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        booking.status = "completed"
+        booking.save(update_fields=["status"])
+
+        return Response(
+            {
+                "message": "Booking completed successfully.",
+                "status": booking.status,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    # -----------------------------------------------------
+    # INVALID STATUS
+    # -----------------------------------------------------
+
+    return Response(
+        {
+            "error": (
+                "Invalid status. Allowed statuses are: "
+                "accepted, rejected, completed, cancelled."
+            )
+        },
+        status=status.HTTP_400_BAD_REQUEST,
+    )
 
 
 # =========================
