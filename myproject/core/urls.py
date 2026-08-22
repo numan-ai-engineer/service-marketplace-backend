@@ -13,6 +13,7 @@ from .views import (
     test_protected,
     notifications,
     notification_count,
+    mark_notification_read,
     upload_verification,
     pending_workers,
     verify_worker,
@@ -25,6 +26,8 @@ from .views import (
      worker_location,
      customer_location,
      nearby_workers,
+     customer_bookings,
+     worker_bookings,
 )
 
 from .views import register
@@ -72,6 +75,12 @@ urlpatterns = [
         "worker/upload-verification/",
         upload_verification,
     ),
+
+# Mark Notification as Read
+    path(
+    "notifications/<int:pk>/read/",
+    mark_notification_read,
+),
 
     # Worker online status
     path(
@@ -134,6 +143,20 @@ path(
 path(
     "customer/nearby-workers/",
     nearby_workers,
+),
+
+# =========================================================
+# BOOKING HISTORY
+# =========================================================
+
+path(
+    "customer/bookings/",
+    customer_bookings,
+),
+
+path(
+    "worker/bookings/",
+    worker_bookings,
 ),
 
     # Router URLs

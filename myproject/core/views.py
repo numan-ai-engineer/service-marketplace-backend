@@ -354,6 +354,41 @@ def notifications(request):
 })
 
     return Response(data)
+
+# =========================================================
+# MARK NOTIFICATION AS READ
+# =========================================================
+
+@api_view(["PATCH"])
+@permission_classes([IsAuthenticated])
+def mark_notification_read(request, pk):
+
+    try:
+        notification = Notification.objects.get(
+            id=pk,
+            user=request.user,
+        )
+
+    except Notification.DoesNotExist:
+        return Response(
+            {
+                "error": "Notification not found."
+            },
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    notification.is_read = True
+    notification.save()
+
+    return Response(
+        {
+            "message": "Notification marked as read.",
+            "notification_id": notification.id,
+            "is_read": notification.is_read,
+        },
+        status=status.HTTP_200_OK,
+    )
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def notification_count(request):
@@ -1224,6 +1259,81 @@ def nearby_workers(request):
             "radius_km": radius_km,
             "count": len(nearby),
             "workers": nearby,
+        },
+        status=status.HTTP_200_OK,
+    )
+
+    # =========================================================
+# CUSTOMER BOOKING HISTORY
+# =========================================================
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def customer_bookings(request):
+
+    if request.user.role != "customer":
+        return Response(
+            {
+                "error": "Only customers can access customer bookings."
+            },
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    bookings = Booking.objects.filter(
+        customer=request.user
+    ).select_related(
+        "worker",
+        "service",
+    ).order_by("-created_at")
+
+    serializer = BookingSerializer(
+        bookings,
+        many=True
+    )
+
+    return Response(
+        {
+            "customer": request.user.username,
+            "count": bookings.count(),
+            "bookings": serializer.data,
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
+# =========================================================
+# WORKER BOOKING HISTORY
+# =========================================================
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def worker_bookings(request):
+
+    if request.user.role != "worker":
+        return Response(
+            {
+                "error": "Only workers can access worker bookings."
+            },
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    bookings = Booking.objects.filter(
+        worker=request.user
+    ).select_related(
+        "customer",
+        "service",
+    ).order_by("-created_at")
+
+    serializer = BookingSerializer(
+        bookings,
+        many=True
+    )
+
+    return Response(
+        {
+            "worker": request.user.username,
+            "count": bookings.count(),
+            "bookings": serializer.data,
         },
         status=status.HTTP_200_OK,
     )
