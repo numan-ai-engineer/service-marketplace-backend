@@ -39,8 +39,13 @@ function Services() {
 
     try {
       const response = await api.post("/bookings/", {
-        service: serviceId,
-      });
+  worker: 2,
+  service: serviceId,
+});
+
+if (response.status >= 200 && response.status < 300) {
+  alert("Booking Created Successfully");
+}
 
       const data = response.data;
 

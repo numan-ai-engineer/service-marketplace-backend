@@ -48,29 +48,41 @@ function ServiceDetails() {
   }, [id]);
 
   const handleBooking = async () => {
-    try {
-      setBooking(true);
+  try {
+    setBooking(true);
 
-      const response = await api.post("/bookings/", {
-        service: id,
-      });
+    const response = await api.post("/bookings/", {
+      worker: 2,
+      service: id,
+    });
 
-      const data = response.data;
+    console.log("Booking Response:", response.data);
 
-      console.log("Booking Response:", data);
-
-      if (response.ok) {
-        alert("Booking Created Successfully");
-      } else {
-        alert(data.error || "Booking Failed");
-      }
-    } catch (error) {
-      console.log("Booking Error:", error);
-      alert("Server Error");
-    } finally {
-      setBooking(false);
+    if (response.status >= 200 && response.status < 300) {
+      alert("Booking Created Successfully");
+    } else {
+      alert(
+        response.data?.error ||
+        response.data?.detail ||
+        "Booking Failed"
+      );
     }
-  };
+
+  } catch (error) {
+    console.log("Booking Error:", error);
+
+    alert(
+      error.response?.data?.worker ||
+      error.response?.data?.service ||
+      error.response?.data?.error ||
+      error.response?.data?.detail ||
+      "Booking Failed"
+    );
+
+  } finally {
+    setBooking(false);
+  }
+};
 
   /* LOADING */
   if (loading) {
