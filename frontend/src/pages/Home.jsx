@@ -38,22 +38,37 @@ const loadServices = async () => {
 };
 
 const loadWorkers = async () => {
-  const response = await api.get("/workers/");
+  try {
+    const response = await api.get(
+      "/customer/nearby-workers/?radius=50"
+    );
 
-  console.log("API RESPONSE:", response);
+    console.log("NEARBY WORKERS API RESPONSE:", response);
 
-  if (response.ok) {
-    console.log("Workers:", response.data);
+    if (response.ok) {
+      console.log("LIVE NEARBY WORKERS:", response.data);
 
-    setWorkers(response.data);
-  } else {
-    console.log("API FAILED");
+      setWorkers(response.data.workers || []);
+    } else {
+      console.log("NEARBY WORKERS API FAILED");
+    }
+  } catch (error) {
+    console.error("NEARBY WORKERS ERROR:", error);
   }
 };
 
 useEffect(() => {
   loadServices();
   loadWorkers();
+
+  const interval = setInterval(() => {
+    console.log("🔄 REFRESHING NEARBY WORKERS...");
+    loadWorkers();
+  }, 5000);
+
+  return () => {
+    clearInterval(interval);
+  };
 }, []);
 
 return (

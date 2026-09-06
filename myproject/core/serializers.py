@@ -23,10 +23,13 @@ class ServiceSerializer(serializers.ModelSerializer):
 # =========================
 # WORKER SERIALIZER
 # =========================
+
 class WorkerProfileSerializer(serializers.ModelSerializer):
 
     user = serializers.SerializerMethodField()
     services = serializers.SerializerMethodField()
+    latitude = serializers.SerializerMethodField()
+    longitude = serializers.SerializerMethodField()
 
     class Meta:
         model = WorkerProfile
@@ -48,7 +51,21 @@ class WorkerProfileSerializer(serializers.ModelSerializer):
             for service in obj.services.all()
         ]
 
-    # =========================================================
+    def get_latitude(self, obj):
+
+        try:
+            return str(obj.location.latitude)
+        except WorkerLocation.DoesNotExist:
+            return None
+
+    def get_longitude(self, obj):
+
+        try:
+            return str(obj.location.longitude)
+        except WorkerLocation.DoesNotExist:
+            return None
+
+ # =========================================================
 # WORKER LOCATION SERIALIZER
 # =========================================================
 

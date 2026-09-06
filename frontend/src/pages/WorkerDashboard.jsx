@@ -21,61 +21,52 @@ function WorkerDashboard() {
     selfie: "",
   });
 
-  const loadDashboard = async () => {
-  const token = localStorage.getItem("access");
+const loadDashboard = async () => {
+  try {
+    const token = localStorage.getItem("access");
 
-  const response = await fetch(
-    "http://127.0.0.1:8000/api/worker/dashboard/",
-    {
-      headers: {
-        Authorization: "Bearer " + token,
-      },
+    if (!token) {
+      console.log("NO ACCESS TOKEN");
+      return;
     }
-  );
 
-  if (!response.ok) {
-    console.log(await response.text());
-    return;
-  }
+    const response = await fetch(
+      "http://127.0.0.1:8000/api/worker/dashboard/",
+      {
+        headers: {
+          Authorization: "Bearer " + token,
+        },
+      }
+    );
 
-  const data = await response.json();
+    if (!response.ok) {
+      console.log(
+        "WORKER DASHBOARD ERROR:",
+        response.status,
+        await response.text()
+      );
+      return;
+    }
+
+    const data = await response.json();
+
+console.log("WORKER DASHBOARD:", data);
 
 setDashboard(data);
-setIsOnline(data.is_online);
 
-// Load online workers for Google Map
-const workersResponse = await fetch(
-  "http://127.0.0.1:8000/api/workers/",
-  {
-    headers: {
-      Authorization: "Bearer " + token,
-    },
+// Sync frontend online status with Django
+setIsOnline(Boolean(data.is_online));
+  } catch (error) {
+    console.error("LOAD DASHBOARD ERROR:", error);
   }
-);
-
-if (workersResponse.ok) {
-  const workersData = await workersResponse.json();
-
-  console.log("DASHBOARD WORKERS:", workersData);
-
-  setWorkers(workersData);
-}
 };
 
 // =========================
-// LOAD DASHBOARD EVERY 10 SECONDS
+// LOAD DASHBOARD
 // =========================
 
 useEffect(() => {
   loadDashboard();
-
-  const interval = setInterval(() => {
-    loadDashboard();
-  }, 10000);
-
-  return () => {
-    clearInterval(interval);
-  };
 }, []);
 
 
@@ -85,6 +76,33 @@ useEffect(() => {
 
 const updateLocation = async (latitude, longitude) => {
   const token = localStorage.getItem("access");
+
+  // =========================================
+  // UPDATE MAP IMMEDIATELY
+  // =========================================
+
+  setWorkers([
+    {
+      id: "current-worker",
+      worker_id: "current-worker",
+      latitude: Number(latitude),
+      longitude: Number(longitude),
+      user: {
+        name: dashboard?.worker || "Worker",
+      },
+      is_online: true,
+    },
+  ]);
+
+  console.log(
+    "MAP LOCATION UPDATED:",
+    latitude,
+    longitude
+  );
+
+  // =========================================
+  // SEND LOCATION TO DJANGO
+  // =========================================
 
   try {
     const response = await fetch(
@@ -104,67 +122,118 @@ const updateLocation = async (latitude, longitude) => {
 
     const data = await response.json();
 
-    console.log("LOCATION UPDATE STATUS:", response.status);
-    console.log("LOCATION UPDATE RESPONSE:", data);
+    console.log(
+      "LOCATION UPDATE STATUS:",
+      response.status
+    );
+
+    console.log(
+      "LOCATION UPDATE RESPONSE:",
+      data
+    );
+
+    if (!response.ok) {
+      console.error(
+        "LOCATION UPDATE FAILED:",
+        data
+      );
+    }
 
   } catch (error) {
-    console.log("Location Update Error:", error);
+    console.error(
+      "LOCATION UPDATE ERROR:",
+      error
+    );
   }
 };
-
 
 // =========================
 // GPS LOCATION TRACKING
 // =========================
 
 useEffect(() => {
-  if (!navigator.geolocation) {
+
+  // WORKER OFFLINE
+  if (!isOnline) {
+
     console.log(
-      "Geolocation is not supported by this browser."
+      "WORKER OFFLINE - GPS STOPPED"
     );
+
+    // Remove worker marker from map
+    setWorkers([]);
+
     return;
   }
 
-  const watchId = navigator.geolocation.watchPosition(
-    (position) => {
-      const latitude = position.coords.latitude;
-      const longitude = position.coords.longitude;
+  // CHECK GPS SUPPORT
+  if (!navigator.geolocation) {
 
-      console.log(
-        "GPS LOCATION:",
-        latitude,
-        longitude
-      );
+    console.error(
+      "Geolocation is not supported by this browser."
+    );
 
-      updateLocation(
-        latitude,
-        longitude
-      );
-    },
+    return;
+  }
 
-    (error) => {
-      console.log(
-        "GPS ERROR CODE:",
-        error.code
-      );
-
-      console.log(
-        "GPS ERROR MESSAGE:",
-        error.message
-      );
-    },
-
-    {
-      enableHighAccuracy: true,
-      maximumAge: 10000,
-      timeout: 30000,
-    }
+  console.log(
+    "WORKER ONLINE - GPS STARTED"
   );
 
+  // START GPS TRACKING
+  const watchId =
+    navigator.geolocation.watchPosition(
+
+      (position) => {
+
+        const latitude =
+          position.coords.latitude;
+
+        const longitude =
+          position.coords.longitude;
+
+        console.log(
+          "GPS LOCATION:",
+          latitude,
+          longitude
+        );
+
+        // UPDATE MAP + DJANGO
+        updateLocation(
+          latitude,
+          longitude
+        );
+      },
+
+      (error) => {
+
+        console.error(
+          "GPS ERROR:",
+          error.code,
+          error.message
+        );
+      },
+
+      {
+        enableHighAccuracy: true,
+        maximumAge: 5000,
+        timeout: 30000,
+      }
+    );
+
+  // CLEANUP GPS WHEN WORKER GOES OFFLINE
   return () => {
-    navigator.geolocation.clearWatch(watchId);
+
+    console.log(
+      "GPS TRACKING CLEANUP"
+    );
+
+    navigator.geolocation.clearWatch(
+      watchId
+    );
   };
-}, []);
+
+}, [isOnline]);
 
   const updateStatus = async (bookingId, status) => {
     const token = localStorage.getItem("access");
@@ -191,13 +260,15 @@ useEffect(() => {
   };
 
   const toggleOnlineStatus = async () => {
-
-     console.log("BUTTON CLICKED");
-
-     console.log("Current isOnline:", isOnline);
-console.log("Sending:", !isOnline);
-
   const token = localStorage.getItem("access");
+
+  const newStatus = !isOnline;
+
+  console.log("=================================");
+  console.log("ONLINE STATUS BUTTON");
+  console.log("CURRENT FRONTEND:", isOnline);
+  console.log("SENDING TO DJANGO:", newStatus);
+  console.log("=================================");
 
   try {
     const response = await fetch(
@@ -209,29 +280,44 @@ console.log("Sending:", !isOnline);
           Authorization: "Bearer " + token,
         },
         body: JSON.stringify({
-          is_online: !isOnline,
+          is_online: newStatus,
         }),
       }
     );
 
     const data = await response.json();
 
-    if (response.ok) {
-      setIsOnline(data.is_online);
+    console.log("DJANGO HTTP:", response.status);
+    console.log("DJANGO RESPONSE:", data);
+    console.log("DJANGO is_online:", data.is_online);
 
-      alert(data.message);
-
-      loadDashboard();
-    } else {
-      alert(data.error);
+    if (!response.ok) {
+      alert(data.error || "Status update failed");
+      return;
     }
+
+    setIsOnline(Boolean(data.is_online));
+
+setDashboard((previous) => ({
+  ...previous,
+  is_online: Boolean(data.is_online),
+}));
+
+// =========================
+// CLEAR MAP WHEN OFFLINE
+// =========================
+
+if (!data.is_online) {
+  setWorkers([]);
+}
+
   } catch (error) {
-    console.error(error);
+    console.error("ONLINE STATUS ERROR:", error);
     alert("Server Error");
   }
 };
 
-  const uploadVerification = async () => {
+const uploadVerification = async () => {
   const token = localStorage.getItem("access");
 
   console.log("🚀 UPLOAD VERIFICATION BUTTON CLICKED");
@@ -241,24 +327,15 @@ console.log("Sending:", !isOnline);
   formData.append("cnic", verification.cnic);
 
   if (verification.cnic_front) {
-    formData.append(
-      "cnic_front",
-      verification.cnic_front
-    );
+    formData.append("cnic_front", verification.cnic_front);
   }
 
   if (verification.cnic_back) {
-    formData.append(
-      "cnic_back",
-      verification.cnic_back
-    );
+    formData.append("cnic_back", verification.cnic_back);
   }
 
   if (verification.selfie) {
-    formData.append(
-      "selfie",
-      verification.selfie
-    );
+    formData.append("selfie", verification.selfie);
   }
 
   console.log("CNIC:", verification.cnic);
@@ -271,11 +348,9 @@ console.log("Sending:", !isOnline);
       "http://127.0.0.1:8000/api/worker/upload-verification/",
       {
         method: "POST",
-
         headers: {
           Authorization: "Bearer " + token,
         },
-
         body: formData,
       }
     );
@@ -308,7 +383,6 @@ console.log("Sending:", !isOnline);
     }
 
   } catch (error) {
-
     console.error(
       "UPLOAD VERIFICATION ERROR:",
       error
@@ -349,7 +423,10 @@ return (
     📍 Live Worker Location
   </h2>
 
-  <GoogleMapComponent workers={workers} />
+  <GoogleMapComponent
+  workers={workers}
+  customerLocation={null}
+/>
 </div>
 
       <div>

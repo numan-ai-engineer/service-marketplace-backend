@@ -83,48 +83,69 @@ if (response.status !== 204) {
   data = await response.json();
 }
 
-  return {
-    ok: response.ok,
+  if (!response.ok) {
+  console.log("API ERROR:", {
+    endpoint,
     status: response.status,
     data,
+  });
+
+  throw {
+    response: {
+      status: response.status,
+      data,
+    },
   };
+}
+
+return {
+  ok: response.ok,
+  status: response.status,
+  data,
+};
 }
 
 // =========================
 // API Methods
 // =========================
 const api = {
-  get(endpoint) {
-    return request(endpoint);
+  get(endpoint, options = {}) {
+    return request(endpoint, {
+      method: "GET",
+      ...options,
+    });
   },
 
-  post(endpoint, body) {
+  post(endpoint, body, options = {}) {
     return request(endpoint, {
       method: "POST",
       body: JSON.stringify(body),
+      ...options,
     });
   },
 
-  put(endpoint, body) {
+  put(endpoint, body, options = {}) {
     return request(endpoint, {
       method: "PUT",
       body: JSON.stringify(body),
+      ...options,
     });
   },
 
-  patch(endpoint, body) {
+  patch(endpoint, body, options = {}) {
     return request(endpoint, {
       method: "PATCH",
       body: JSON.stringify(body),
+      ...options,
     });
   },
 
-delete(endpoint, options = {}) {
-  return request(endpoint, {
-    method: "DELETE",
-    ...options,
-  });
-},
+  delete(endpoint, options = {}) {
+    return request(endpoint, {
+      method: "DELETE",
+      ...options,
+    });
+  },
 };
 
 export default api;

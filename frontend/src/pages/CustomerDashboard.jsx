@@ -5,47 +5,187 @@ import GoogleMapComponent from "../components/GoogleMap";
 
 function CustomerDashboard() {
   const [dashboard, setDashboard] = useState(null);
-   const [workers, setWorkers] = useState([]);
+  const [workers, setWorkers] = useState([]);
+  const [customerLocation, setCustomerLocation] = useState(null);
 
-     const [reviewBooking, setReviewBooking] = useState(null);
+  const [reviewBooking, setReviewBooking] = useState(null);
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
   const [showReviewForm, setShowReviewForm] = useState(false);
 
-useEffect(() => {
+ useEffect(() => {
   loadDashboard();
+
+  const interval = setInterval(() => {
+    loadDashboard();
+  }, 5000);
+
+  return () => {
+    clearInterval(interval);
+  };
 }, []);
 
-const loadDashboard = async () => {
-  const token = localStorage.getItem("access");
 
-  const response = await api.get("/customer/dashboard/", {
-    headers: {
-      Authorization: "Bearer " + token,
-    },
-  });
+  // =========================
+  // CUSTOMER GPS LOCATION
+  // =========================
 
-  console.log("CUSTOMER DASHBOARD:", response);
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      console.log(
+        "Geolocation is not supported by this browser."
+      );
+      return;
+    }
 
-  setDashboard(response.data);
+    const watchId = navigator.geolocation.watchPosition(
+      async (position) => {
+        const latitude = Number(
+  position.coords.latitude.toFixed(6)
+);
 
-  const workersResponse = await api.get("/workers/", {
-    headers: {
-      Authorization: "Bearer " + token,
-    },
-  });
+const longitude = Number(
+  position.coords.longitude.toFixed(6)
+);
 
+const accuracy = Number(
+  position.coords.accuracy.toFixed(2)
+);
+
+        console.log(
+          "CUSTOMER GPS:",
+          latitude,
+          longitude
+        );
+
+        setCustomerLocation({
+          latitude,
+          longitude,
+        });
+
+        try {
+          const token = localStorage.getItem("access");
+
+          await api.post(
+            "/customer/location/",
+            {
+              latitude,
+              longitude,
+              accuracy,
+            },
+            {
+              headers: {
+                Authorization: "Bearer " + token,
+              },
+            }
+          );
+
+          console.log("CUSTOMER LOCATION REQUEST COMPLETED");
+
+        } catch (error) {
   console.log(
-    "CUSTOMER WORKERS:",
-    workersResponse.data
+    "CUSTOMER LOCATION ERROR STATUS:",
+    error.response?.status
   );
 
-  console.log("CUSTOMER WORKERS COUNT:", workersResponse.data.length);
+  console.log(
+    "CUSTOMER LOCATION ERROR DATA:",
+    error.response?.data
+  );
 
-  setWorkers(workersResponse.data);
-};
+  console.log(
+    "CUSTOMER LOCATION ERROR:",
+    error
+  );
+}
+      },
 
-const bookWorker = async (worker) => {
+      (error) => {
+        console.log(
+          "CUSTOMER GPS ERROR CODE:",
+          error.code
+        );
+
+        console.log(
+          "CUSTOMER GPS ERROR MESSAGE:",
+          error.message
+        );
+      },
+
+      {
+        enableHighAccuracy: true,
+        maximumAge: 10000,
+        timeout: 30000,
+      }
+    );
+
+    return () => {
+      navigator.geolocation.clearWatch(watchId);
+    };
+  }, []);
+
+
+  // =========================
+  // LOAD DASHBOARD
+  // =========================
+
+  const loadDashboard = async () => {
+    try {
+      const token = localStorage.getItem("access");
+
+      const response = await api.get(
+        "/customer/dashboard/",
+        {
+          headers: {
+            Authorization: "Bearer " + token,
+          },
+        }
+      );
+
+      console.log(
+        "CUSTOMER DASHBOARD:",
+        response.data
+      );
+
+      setDashboard(response.data);
+
+
+      // =========================
+      // NEARBY WORKERS
+      // =========================
+
+      const workersResponse = await api.get(
+        "/customer/nearby-workers/?radius=50",
+        {
+          headers: {
+            Authorization: "Bearer " + token,
+          },
+        }
+      );
+
+      console.log(
+        "NEARBY WORKERS:",
+        workersResponse.data
+      );
+
+      setWorkers(
+        workersResponse.data.workers || []
+      );
+
+    } catch (error) {
+      console.log(
+        "LOAD DASHBOARD ERROR:",
+        error.response?.data || error
+      );
+    }
+  };
+
+
+  // =========================
+  // BOOK WORKER
+  // =========================
+
+  const bookWorker = async (worker) => {
   const token = localStorage.getItem("access");
 
   console.log("FULL WORKER OBJECT:", worker);
@@ -265,6 +405,7 @@ const getBadgeColor = (status) => {
 
   <GoogleMapComponent
   workers={workers}
+  customerLocation={customerLocation}
   showBookingButton={true}
   onBookWorker={bookWorker}
 />
