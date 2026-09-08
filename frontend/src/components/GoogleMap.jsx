@@ -1,7 +1,7 @@
 import {
   GoogleMap,
-  Marker,
-  InfoWindow,
+  MarkerF,
+  InfoWindowF,
   useJsApiLoader,
 } from "@react-google-maps/api";
 
@@ -102,7 +102,7 @@ const mapCenter = customerLocation
 ======================================= */}
 
 {customerLocation && (
-  <Marker
+  <MarkerF
     position={{
       lat: Number(customerLocation.latitude),
       lng: Number(customerLocation.longitude),
@@ -128,7 +128,7 @@ const mapCenter = customerLocation
         }
 
         return (
-          <Marker
+          <MarkerF
   key={worker.worker_id ?? worker.id}
   position={{
     lat: latitude,
@@ -149,7 +149,7 @@ const mapCenter = customerLocation
       ======================================= */}
 
       {selectedWorker && (
-        <InfoWindow
+        <InfoWindowF
           position={{
             lat: Number(selectedWorker.latitude),
             lng: Number(selectedWorker.longitude),
@@ -265,7 +265,7 @@ const mapCenter = customerLocation
             )}
 
           </div>
-        </InfoWindow>
+        </InfoWindowF>
       )}
 
     </GoogleMap>
