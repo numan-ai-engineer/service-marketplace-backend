@@ -388,21 +388,47 @@ def nearby_workers(request):
 class BookingViewSet(viewsets.ModelViewSet):
     queryset = Booking.objects.all()
     serializer_class = BookingSerializer
+    permission_classes = [IsAuthenticated]
+
+    # Booking API صرف GET اور POST allow کرے گی.
+    # PUT / PATCH / DELETE کو disable کیا جا رہا ہے.
+    http_method_names = ["get", "post", "head", "options"]
+
+    def get_queryset(self):
+        user = self.request.user
+
+        if user.role == "customer":
+            return Booking.objects.filter(
+                customer=user
+            ).select_related("worker", "service")
+
+        if user.role == "worker":
+            return Booking.objects.filter(
+                worker=user
+            ).select_related("customer", "service")
+
+        return Booking.objects.none()
 
     def perform_create(self, serializer):
+
+        # صرف customer booking create کر سکتا ہے
+        if self.request.user.role != "customer":
+            raise ValidationError(
+                {"error": "Only customers can create bookings."}
+            )
 
         service_id = self.request.data.get("service")
         worker_id = self.request.data.get("worker")
 
         if not service_id:
-            raise ValidationError({
-                "service": "Service is required"
-            })
+            raise ValidationError(
+                {"service": "Service is required"}
+            )
 
         if not worker_id:
-            raise ValidationError({
-                "worker": "Worker is required"
-            })
+            raise ValidationError(
+                {"worker": "Worker is required"}
+            )
 
         service_obj = get_object_or_404(
             Service,
@@ -417,27 +443,25 @@ class BookingViewSet(viewsets.ModelViewSet):
             is_verified=True,
         )
 
+        # Check worker provides selected service
         if not worker.services.filter(
             id=service_obj.id
         ).exists():
-
-            raise ValidationError({
-                "error": "Worker does not provide this service"
-            })
+            raise ValidationError(
+                {"error": "Worker does not provide this service"}
+            )
 
         serializer.save(
             customer=self.request.user,
             worker=worker.user,
             service=service_obj,
+            status="pending",
         )
 
         Notification.objects.create(
             user=worker.user,
             booking=serializer.instance,
-            message=(
-                f"You have received a new booking "
-                f"for {service_obj.name} service."
-            )
+            message=f"You have received a new booking for {service_obj.name} service."
         )
 
 

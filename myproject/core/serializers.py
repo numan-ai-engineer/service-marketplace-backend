@@ -135,7 +135,7 @@ class BookingSerializer(serializers.ModelSerializer):
     class Meta:
         model = Booking
         fields = '__all__'
-        read_only_fields = ['customer', 'worker']
+        read_only_fields = ["customer", "worker", "status", "created_at"]
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
