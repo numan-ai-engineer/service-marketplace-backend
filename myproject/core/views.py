@@ -733,37 +733,95 @@ def customer_dashboard(request):
 # =========================
 # WORKER DASHBOARD
 # =========================
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def worker_dashboard(request):
 
-    bookings = Booking.objects.filter(worker_id=request.user.id)
+    # Worker account check
+    if request.user.role != "worker":
+        return Response(
+            {
+                "error": "Only workers can access worker dashboard."
+            },
+            status=status.HTTP_403_FORBIDDEN,
+        )
 
-    worker_profile = WorkerProfile.objects.get(
-        user=request.user
+    # Safely get worker profile
+    worker_profile = (
+        WorkerProfile.objects
+        .filter(user=request.user)
+        .first()
     )
 
+    if not worker_profile:
+        return Response(
+            {
+                "error": "Worker profile not found."
+            },
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    # Get worker bookings
+    bookings = (
+        Booking.objects
+        .filter(worker=request.user)
+        .select_related(
+            "customer",
+            "worker",
+            "service",
+        )
+        .order_by("-created_at")
+    )
+
+    # Total reviews
     total_reviews = Review.objects.filter(
         worker=worker_profile
     ).count()
 
-    return Response({
-    "worker": request.user.username,
-    "rating": worker_profile.rating,
-    "total_reviews": total_reviews,
+    return Response(
+        {
+            "worker": request.user.username,
 
-    "total": bookings.count(),
-    "pending": bookings.filter(status="pending").count(),
-    "accepted": bookings.filter(status="accepted").count(),
-    "completed": bookings.filter(status="completed").count(),
+            "rating": worker_profile.rating,
 
-    "bookings": BookingSerializer(bookings, many=True).data,
+            "total_reviews": total_reviews,
 
-    "is_online": worker_profile.is_online,
-})
+            "total": bookings.count(),
 
+            "pending": bookings.filter(
+                status="pending"
+            ).count(),
 
+            "accepted": bookings.filter(
+                status="accepted"
+            ).count(),
 
+            "completed": bookings.filter(
+                status="completed"
+            ).count(),
+
+            "rejected": bookings.filter(
+                status="rejected"
+            ).count(),
+
+            "cancelled": bookings.filter(
+                status="cancelled"
+            ).count(),
+
+            "bookings": BookingSerializer(
+                bookings,
+                many=True
+            ).data,
+
+            "is_online": worker_profile.is_online,
+        },
+        status=status.HTTP_200_OK,
+    )
+
+# =========================
+# WORKER Notification
+# =========================
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def notifications(request):

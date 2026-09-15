@@ -7,6 +7,7 @@ async function refreshAccessToken() {
   const refresh = localStorage.getItem("refresh");
 
   if (!refresh) {
+    console.log("NO REFRESH TOKEN");
     return null;
   }
 
@@ -23,19 +24,28 @@ async function refreshAccessToken() {
 
     const data = await response.json();
 
-    if (response.ok) {
+    console.log("TOKEN REFRESH STATUS:", response.status);
+    console.log("TOKEN REFRESH RESPONSE:", data);
+
+    if (response.ok && data.access) {
       localStorage.setItem("access", data.access);
+
+      console.log("ACCESS TOKEN REFRESHED");
+
       return data.access;
     }
 
+    console.log("REFRESH TOKEN INVALID");
+
     localStorage.removeItem("access");
-localStorage.removeItem("refresh");
+    localStorage.removeItem("refresh");
 
-window.location.href = "/login";
+    window.location.href = "/login";
 
-return null;
+    return null;
+
   } catch (error) {
-    console.log("Refresh Token Error:", error);
+    console.error("Refresh Token Error:", error);
     return null;
   }
 }
