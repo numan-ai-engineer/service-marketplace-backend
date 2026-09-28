@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Container, Card, Badge, Button } from "react-bootstrap";
+import GoogleMapComponent from "../components/GoogleMap";
 
 function BookingDetails() {
   const { id } = useParams();
@@ -75,6 +76,15 @@ const [comment, setComment] = useState("");
         <h5 className="mt-3">
           <strong>Booking Date:</strong> {booking.created_at}
         </h5>
+
+        <div className="mt-4">
+  <h4 className="mb-3">Live Location</h4>
+
+  <GoogleMapComponent
+    customerLocation={booking.customer_location}
+    workerLocation={booking.worker_location}
+  />
+</div>
 
       </Card>
     </Container>

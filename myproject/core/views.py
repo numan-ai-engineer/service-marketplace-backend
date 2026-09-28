@@ -556,9 +556,9 @@ def update_booking_status(request, pk):
 
     new_status = request.data.get("status")
 
-    # -----------------------------------------------------
+    # =====================================================
     # CUSTOMER CANCEL
-    # -----------------------------------------------------
+    # =====================================================
 
     if new_status == "cancelled":
 
@@ -583,6 +583,13 @@ def update_booking_status(request, pk):
         booking.status = "cancelled"
         booking.save(update_fields=["status"])
 
+        # Notify worker
+        Notification.objects.create(
+            user=booking.worker,
+            booking=booking,
+            message="Customer cancelled the booking."
+        )
+
         return Response(
             {
                 "message": "Booking cancelled successfully.",
@@ -591,9 +598,9 @@ def update_booking_status(request, pk):
             status=status.HTTP_200_OK,
         )
 
-    # -----------------------------------------------------
+    # =====================================================
     # WORKER ONLY
-    # -----------------------------------------------------
+    # =====================================================
 
     if booking.worker != request.user:
         return Response(
@@ -605,9 +612,9 @@ def update_booking_status(request, pk):
             status=status.HTTP_403_FORBIDDEN,
         )
 
-    # -----------------------------------------------------
+    # =====================================================
     # ACCEPT
-    # -----------------------------------------------------
+    # =====================================================
 
     if new_status == "accepted":
 
@@ -624,6 +631,13 @@ def update_booking_status(request, pk):
         booking.status = "accepted"
         booking.save(update_fields=["status"])
 
+        # Notify customer
+        Notification.objects.create(
+            user=booking.customer,
+            booking=booking,
+            message="Worker accepted your booking request."
+        )
+
         return Response(
             {
                 "message": "Booking accepted successfully.",
@@ -632,9 +646,9 @@ def update_booking_status(request, pk):
             status=status.HTTP_200_OK,
         )
 
-    # -----------------------------------------------------
+    # =====================================================
     # REJECT
-    # -----------------------------------------------------
+    # =====================================================
 
     if new_status == "rejected":
 
@@ -651,6 +665,13 @@ def update_booking_status(request, pk):
         booking.status = "rejected"
         booking.save(update_fields=["status"])
 
+        # Notify customer
+        Notification.objects.create(
+            user=booking.customer,
+            booking=booking,
+            message="Worker rejected your booking request."
+        )
+
         return Response(
             {
                 "message": "Booking rejected successfully.",
@@ -659,9 +680,9 @@ def update_booking_status(request, pk):
             status=status.HTTP_200_OK,
         )
 
-    # -----------------------------------------------------
+    # =====================================================
     # COMPLETE
-    # -----------------------------------------------------
+    # =====================================================
 
     if new_status == "completed":
 
@@ -678,6 +699,13 @@ def update_booking_status(request, pk):
         booking.status = "completed"
         booking.save(update_fields=["status"])
 
+        # Notify customer
+        Notification.objects.create(
+            user=booking.customer,
+            booking=booking,
+            message="Your booking has been completed."
+        )
+
         return Response(
             {
                 "message": "Booking completed successfully.",
@@ -686,9 +714,9 @@ def update_booking_status(request, pk):
             status=status.HTTP_200_OK,
         )
 
-    # -----------------------------------------------------
+    # =====================================================
     # INVALID STATUS
-    # -----------------------------------------------------
+    # =====================================================
 
     return Response(
         {
