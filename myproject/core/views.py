@@ -1,27 +1,46 @@
 from django.db.models import Avg
+from django.shortcuts import get_object_or_404
+from django.conf import settings
+from django.core.mail import send_mail
+from django.contrib.auth import get_user_model
+from django.contrib.auth.hashers import make_password
+from django.contrib.auth.tokens import default_token_generator
+from django.utils import timezone
+from django.utils.encoding import force_bytes, force_str
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+
+from math import radians, sin, cos, sqrt, atan2
+
 from rest_framework import viewsets, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
-from .serializers import WorkerVerificationSerializer
-from django.shortcuts import get_object_or_404
+
+from .models import (
+    User,
+    Service,
+    WorkerProfile,
+    WorkerLocation,
+    WorkerVerification,
+    Booking,
+    Review,
+    Notification,
+    CustomerLocation,
+)
+
+from .serializers import (
+    UserSerializer,
+    ServiceSerializer,
+    WorkerProfileSerializer,
+    BookingSerializer,
+    ReviewSerializer,
+    WorkerVerificationSerializer,
+    WorkerLocationSerializer,
+    CustomerLocationSerializer,
+)
+
 from .ocr import extract_cnic_data
-from django.contrib.auth import get_user_model
-from django.core.mail import send_mail
-from django.conf import settings
-from django.contrib.auth.tokens import default_token_generator
-from django.utils.http import urlsafe_base64_encode
-from django.utils.encoding import force_bytes
-from django.utils.http import urlsafe_base64_decode
-from django.contrib.auth.hashers import make_password
-from django.utils.encoding import force_str
-from math import radians, sin, cos, sqrt, atan2
-
-
-from .models import ( User, Service, WorkerProfile, WorkerLocation, WorkerVerification, Booking, Review, Notification, CustomerLocation, )
-from .serializers import ( UserSerializer, ServiceSerializer, WorkerProfileSerializer, BookingSerializer, 
-ReviewSerializer, WorkerVerificationSerializer, WorkerLocationSerializer, CustomerLocationSerializer, )
 
 # =========================
 # USER API
@@ -1196,47 +1215,115 @@ def admin_dashboard(request):
 @permission_classes([IsAuthenticated])
 def verify_worker(request, pk):
 
+    # =====================================================
+    # ADMIN CHECK
+    # =====================================================
+
     if not request.user.is_staff:
         return Response(
             {"error": "Admin only"},
             status=403,
         )
 
+    # =====================================================
+    # GET WORKER
+    # =====================================================
+
     worker = get_object_or_404(
         WorkerProfile,
         id=pk,
     )
 
+    # =====================================================
+    # GET LATEST PENDING VERIFICATION
+    # =====================================================
+
+    verification = (
+        WorkerVerification.objects
+        .filter(
+            worker=worker,
+            status="pending",
+        )
+        .order_by("-created_at")
+        .first()
+    )
+
+    if not verification:
+        return Response(
+            {
+                "error": "No pending verification found for this worker."
+            },
+            status=404,
+        )
+
+    # =====================================================
+    # ACTION
+    # =====================================================
+
     action = request.data.get("action")
+
+    # =====================================================
+    # APPROVE
+    # =====================================================
 
     if action == "approve":
 
+        verification.status = "approved"
+        verification.reviewed_by = request.user
+        verification.reviewed_at = timezone.now()
+        verification.save()
+
         worker.verification_status = "approved"
         worker.is_verified = True
-
         worker.save()
 
-        return Response({
-            "message": "Worker approved successfully.",
-        })
+        return Response(
+            {
+                "message": "Worker verification approved successfully.",
+                "worker_id": worker.id,
+                "verification_id": verification.id,
+                "verification_status": verification.status,
+                "is_verified": worker.is_verified,
+            },
+            status=200,
+        )
+
+    # =====================================================
+    # REJECT
+    # =====================================================
 
     elif action == "reject":
 
+        verification.status = "rejected"
+        verification.reviewed_by = request.user
+        verification.reviewed_at = timezone.now()
+        verification.save()
+
         worker.verification_status = "rejected"
         worker.is_verified = False
-
         worker.save()
 
-        return Response({
-            "message": "Worker rejected successfully.",
-        })
-
-    else:
-
         return Response(
-            {"error": "Invalid action"},
-            status=400,
+            {
+                "message": "Worker verification rejected.",
+                "worker_id": worker.id,
+                "verification_id": verification.id,
+                "verification_status": verification.status,
+                "is_verified": worker.is_verified,
+            },
+            status=200,
         )
+
+    # =====================================================
+    # INVALID ACTION
+    # =====================================================
+
+    return Response(
+        {
+            "error": "Invalid action. Use 'approve' or 'reject'."
+        },
+        status=400,
+    )
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
