@@ -17,6 +17,7 @@ from .views import (
     upload_verification,
     pending_workers,
     verify_worker,
+    pending_verifications,
     worker_profile,
     admin_dashboard,
     forgot_password,
@@ -150,6 +151,11 @@ urlpatterns = [
         "admin/verify-worker/<int:pk>/",
         verify_worker
     ),
+
+   path(
+    "admin/pending-verifications/",
+    pending_verifications,
+),
 
     # Worker Profile
     path(

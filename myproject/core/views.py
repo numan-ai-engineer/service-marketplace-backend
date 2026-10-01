@@ -1325,6 +1325,38 @@ def verify_worker(request, pk):
         status=400,
     )
 
+# =====================================================
+# PENDING VERIFICATIONS
+# =====================================================
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def pending_verifications(request):
+
+    if not request.user.is_staff:
+        return Response(
+            {"error": "Admin only"},
+            status=403,
+        )
+
+    verifications = (
+        WorkerVerification.objects
+        .filter(status="pending")
+        .select_related("worker", "worker__user")
+        .order_by("-created_at")
+    )
+
+    serializer = WorkerVerificationSerializer(
+        verifications,
+        many=True,
+        context={"request": request},
+    )
+
+    return Response(
+        serializer.data,
+        status=200,
+    )
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def worker_profile(request, pk):

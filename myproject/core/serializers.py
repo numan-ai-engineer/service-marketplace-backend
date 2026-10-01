@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import ( User, Service, WorkerProfile, Booking, Review, WorkerLocation, CustomerLocation, )
+from .models import ( User, Service, WorkerProfile, Booking, Review, WorkerLocation, CustomerLocation, WorkerVerification, )
 
 
 # =========================
@@ -188,25 +188,60 @@ class ReviewSerializer(serializers.ModelSerializer):
             "created_at",
         ]
 
-# Varification Serializer
+# VERIFICATION SERIALIZER
+
 class WorkerVerificationSerializer(serializers.ModelSerializer):
 
+    worker_id = serializers.IntegerField(
+        source="worker.id",
+        read_only=True
+    )
+
+    worker_name = serializers.CharField(
+        source="worker.user.username",
+        read_only=True
+    )
+
     class Meta:
-        model = WorkerProfile
+        model = WorkerVerification
+
         fields = [
-            "cnic",
-            "cnic_front",
-            "cnic_back",
+            "id",
+            "worker_id",
+            "worker_name",
+            "country",
+            "document_type",
+            "document_number",
+            "document_front",
+            "document_back",
             "selfie",
-            "verification_status",
-            "is_verified",
+            "ocr_result",
+            "ocr_confidence",
+            "face_match_score",
+            "face_match_status",
+            "liveness_status",
+            "status",
+            "reviewed_by",
+            "reviewed_at",
+            "created_at",
+            "updated_at",
         ]
 
         read_only_fields = [
-            "verification_status",
-            "is_verified",
+            "id",
+            "worker_id",
+            "worker_name",
+            "ocr_result",
+            "ocr_confidence",
+            "face_match_score",
+            "face_match_status",
+            "liveness_status",
+            "status",
+            "reviewed_by",
+            "reviewed_at",
+            "created_at",
+            "updated_at",
         ]
-
         # =========================================================
 # CUSTOMER LOCATION SERIALIZER
 # =================================================================
