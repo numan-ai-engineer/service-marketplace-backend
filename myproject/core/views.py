@@ -969,6 +969,65 @@ def upload_verification(request):
         )
 
     # =====================================================
+    # CHECK CURRENT VERIFICATION
+    # =====================================================
+
+    latest_verification = (
+        WorkerVerification.objects
+        .filter(worker=worker)
+        .order_by("-created_at")
+        .first()
+    )
+
+    if latest_verification:
+
+        # -------------------------------------------------
+        # PENDING
+        # -------------------------------------------------
+
+        if latest_verification.status == "pending":
+
+            return Response(
+                {
+                    "error": "Your verification is already pending. Please wait for admin review.",
+                    "verification_id": latest_verification.id,
+                    "verification_status": "pending",
+                },
+                status=400,
+            )
+
+        # -------------------------------------------------
+        # APPROVED
+        # -------------------------------------------------
+
+        if latest_verification.status == "approved":
+
+            return Response(
+                {
+                    "error": "Your verification has already been approved.",
+                    "verification_id": latest_verification.id,
+                    "verification_status": "approved",
+                    "is_verified": worker.is_verified,
+                },
+                status=400,
+            )
+
+        # -------------------------------------------------
+        # PROCESSING
+        # -------------------------------------------------
+
+        if latest_verification.status == "processing":
+
+            return Response(
+                {
+                    "error": "Your verification is currently being processed. Please wait.",
+                    "verification_id": latest_verification.id,
+                    "verification_status": "processing",
+                },
+                status=400,
+            )
+
+    # =====================================================
     # CNIC NUMBER
     # =====================================================
 
@@ -1044,7 +1103,6 @@ def upload_verification(request):
     # =====================================================
 
     worker.cnic = cnic
-
     worker.cnic_front = cnic_front
 
     if cnic_back:
@@ -1053,7 +1111,6 @@ def upload_verification(request):
     worker.selfie = selfie
 
     worker.verification_status = "pending"
-
     worker.is_verified = False
 
     worker.save()
@@ -1063,7 +1120,7 @@ def upload_verification(request):
     print("🔥 CNIC:", worker.cnic)
 
     # =====================================================
-    # CREATE VERIFICATION RECORD
+    # CREATE NEW VERIFICATION RECORD
     # =====================================================
 
     verification = WorkerVerification.objects.create(
@@ -1084,10 +1141,11 @@ def upload_verification(request):
 
         status="pending",
 
+        rejection_reason=None,
     )
 
     print(
-        "🔥 VERIFICATION RECORD CREATED:",
+        "🔥 NEW VERIFICATION RECORD CREATED:",
         verification.id
     )
 
