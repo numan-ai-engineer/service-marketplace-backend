@@ -19,6 +19,7 @@ from .views import (
     verify_worker,
     pending_verifications,
     worker_profile,
+    worker_verification_status,
     admin_dashboard,
     forgot_password,
     reset_password,
@@ -162,6 +163,11 @@ urlpatterns = [
         "worker/profile/<int:pk>/",
         worker_profile
     ),
+
+    path(
+    "worker/verification-status/",
+    worker_verification_status,
+),
 
     # Customer Location
     path(

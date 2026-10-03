@@ -225,6 +225,7 @@ class WorkerVerificationSerializer(serializers.ModelSerializer):
             "reviewed_at",
             "created_at",
             "updated_at",
+            "rejection_reason",
         ]
 
         read_only_fields = [
@@ -241,6 +242,7 @@ class WorkerVerificationSerializer(serializers.ModelSerializer):
             "reviewed_at",
             "created_at",
             "updated_at",
+            "rejection_reason",
         ]
         # =========================================================
 # CUSTOMER LOCATION SERIALIZER

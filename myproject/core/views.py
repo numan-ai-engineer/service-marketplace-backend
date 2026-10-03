@@ -1269,6 +1269,7 @@ def verify_worker(request, pk):
     if action == "approve":
 
         verification.status = "approved"
+        verification.rejection_reason = None
         verification.reviewed_by = request.user
         verification.reviewed_at = timezone.now()
         verification.save()
@@ -1294,7 +1295,18 @@ def verify_worker(request, pk):
 
     elif action == "reject":
 
+        rejection_reason = request.data.get("rejection_reason")
+
+        if not rejection_reason:
+            return Response(
+                {
+                    "error": "Rejection reason is required."
+                },
+                status=400,
+            )
+
         verification.status = "rejected"
+        verification.rejection_reason = rejection_reason
         verification.reviewed_by = request.user
         verification.reviewed_at = timezone.now()
         verification.save()
@@ -1309,6 +1321,7 @@ def verify_worker(request, pk):
                 "worker_id": worker.id,
                 "verification_id": verification.id,
                 "verification_status": verification.status,
+                "rejection_reason": verification.rejection_reason,
                 "is_verified": worker.is_verified,
             },
             status=200,
@@ -2130,4 +2143,66 @@ def worker_bookings(request):
             "bookings": serializer.data,
         },
         status=status.HTTP_200_OK,
+    )
+
+# =====================================================
+# WORKER VERIFICATION STATUS
+# =====================================================
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def worker_verification_status(request):
+
+    # =====================================================
+    # GET WORKER PROFILE
+    # =====================================================
+
+    worker = get_object_or_404(
+        WorkerProfile,
+        user=request.user,
+    )
+
+    # =====================================================
+    # GET LATEST VERIFICATION
+    # =====================================================
+
+    verification = (
+        WorkerVerification.objects
+        .filter(worker=worker)
+        .order_by("-created_at")
+        .first()
+    )
+
+    # =====================================================
+    # NO VERIFICATION
+    # =====================================================
+
+    if not verification:
+        return Response(
+            {
+                "worker_id": worker.id,
+                "verification_status": "not_submitted",
+                "is_verified": worker.is_verified,
+                "message": "Verification documents have not been submitted yet.",
+            },
+            status=200,
+        )
+
+    # =====================================================
+    # RESPONSE
+    # =====================================================
+
+    return Response(
+        {
+            "worker_id": worker.id,
+            "verification_id": verification.id,
+            "verification_status": verification.status,
+            "is_verified": worker.is_verified,
+            "rejection_reason": verification.rejection_reason,
+            "document_type": verification.document_type,
+            "country": verification.country,
+            "reviewed_at": verification.reviewed_at,
+            "created_at": verification.created_at,
+        },
+        status=200,
     )

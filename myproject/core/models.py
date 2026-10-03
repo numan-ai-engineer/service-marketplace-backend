@@ -362,7 +362,7 @@ class WorkerVerification(models.Model):
         default="pending",
     )
 
-    # -----------------------------------------------------
+        # -----------------------------------------------------
     # ADMIN REVIEW
     # -----------------------------------------------------
 
@@ -372,6 +372,11 @@ class WorkerVerification(models.Model):
         null=True,
         blank=True,
         related_name="verification_reviews",
+    )
+
+    rejection_reason = models.TextField(
+        blank=True,
+        null=True,
     )
 
     reviewed_at = models.DateTimeField(
