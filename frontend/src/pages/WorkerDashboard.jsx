@@ -893,7 +893,7 @@ function WorkerDashboard() {
 
         </div>
 
-        {/* =========================
+               {/* =========================
             IDENTITY VERIFICATION
         ========================= */}
 
@@ -904,142 +904,400 @@ function WorkerDashboard() {
           </h2>
 
           <p className="text-gray-500 mb-8">
-            Upload your CNIC and selfie for
-            account verification.
+            Secure your account by completing identity verification.
           </p>
 
-          <div className="mb-6">
+          {/* =========================
+              NOT SUBMITTED
+          ========================= */}
 
-            <label className="block font-semibold mb-2">
-              CNIC Number
-            </label>
+          {(!verificationStatus ||
+            verificationStatus.verification_status === "not_submitted") && (
+            <>
+              <div className="mb-6">
 
-            <input
-              type="text"
-              value={verification.cnic}
-              onChange={(e) =>
-                setVerification({
-                  ...verification,
-                  cnic: e.target.value,
-                })
-              }
-              placeholder="35202-1234567-1"
-              className="w-full border rounded-xl p-3 focus:ring-2 focus:ring-blue-500"
-            />
+                <label className="block font-semibold mb-2">
+                  CNIC Number
+                </label>
 
-          </div>
+                <input
+                  type="text"
+                  value={verification.cnic}
+                  onChange={(e) =>
+                    setVerification({
+                      ...verification,
+                      cnic: e.target.value,
+                    })
+                  }
+                  placeholder="35202-1234567-1"
+                  className="w-full border rounded-xl p-3 focus:ring-2 focus:ring-blue-500"
+                />
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-8">
-
-            <div className="border-2 border-dashed border-blue-300 rounded-2xl p-6 text-center hover:border-blue-500 transition">
-
-              <div className="w-20 h-20 mx-auto rounded-full bg-blue-100 flex items-center justify-center text-4xl mb-4">
-                📄
               </div>
 
-              <h3 className="font-bold text-lg">
-                CNIC Front
-              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-8">
 
-              <p className="text-gray-500 text-sm mt-2 mb-4">
-                Upload Front Side of CNIC
-              </p>
+                {/* CNIC FRONT */}
 
-              <input
-                type="file"
-                className="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-700"
-                onChange={(e) =>
-                  setVerification({
-                    ...verification,
-                    cnic_front:
-                      e.target.files[0],
-                  })
-                }
-              />
+                <div className="border-2 border-dashed border-blue-300 rounded-2xl p-6 text-center hover:border-blue-500 transition">
 
-            </div>
+                  <div className="w-20 h-20 mx-auto rounded-full bg-blue-100 flex items-center justify-center text-4xl mb-4">
+                    📄
+                  </div>
 
-            <div className="border-2 border-dashed border-green-300 rounded-2xl p-6 text-center hover:border-green-500 transition">
+                  <h3 className="font-bold text-lg">
+                    CNIC Front
+                  </h3>
 
-              <div className="w-20 h-20 mx-auto rounded-full bg-green-100 flex items-center justify-center text-4xl mb-4">
-                📄
+                  <p className="text-gray-500 text-sm mt-2 mb-4">
+                    Upload Front Side of CNIC
+                  </p>
+
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-700"
+                    onChange={(e) =>
+                      setVerification({
+                        ...verification,
+                        cnic_front: e.target.files[0],
+                      })
+                    }
+                  />
+
+                </div>
+
+                {/* CNIC BACK */}
+
+                <div className="border-2 border-dashed border-green-300 rounded-2xl p-6 text-center hover:border-green-500 transition">
+
+                  <div className="w-20 h-20 mx-auto rounded-full bg-green-100 flex items-center justify-center text-4xl mb-4">
+                    📄
+                  </div>
+
+                  <h3 className="font-bold text-lg">
+                    CNIC Back
+                  </h3>
+
+                  <p className="text-gray-500 text-sm mt-2 mb-4">
+                    Upload Back Side of CNIC
+                  </p>
+
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-green-600 file:text-white hover:file:bg-green-700"
+                    onChange={(e) =>
+                      setVerification({
+                        ...verification,
+                        cnic_back: e.target.files[0],
+                      })
+                    }
+                  />
+
+                </div>
+
+                {/* SELFIE */}
+
+                <div className="border-2 border-dashed border-purple-300 rounded-2xl p-6 text-center hover:border-purple-500 transition">
+
+                  <div className="w-20 h-20 mx-auto rounded-full bg-purple-100 flex items-center justify-center text-4xl mb-4">
+                    🤳
+                  </div>
+
+                  <h3 className="font-bold text-lg">
+                    Selfie Verification
+                  </h3>
+
+                  <p className="text-gray-500 text-sm mt-2 mb-4">
+                    Upload a clear selfie for identity verification
+                  </p>
+
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-purple-600 file:text-white hover:file:bg-purple-700"
+                    onChange={(e) =>
+                      setVerification({
+                        ...verification,
+                        selfie: e.target.files[0],
+                      })
+                    }
+                  />
+
+                </div>
+
               </div>
 
-              <h3 className="font-bold text-lg">
-                CNIC Back
-              </h3>
+              <div className="mt-10 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-3xl p-8 shadow-2xl">
 
-              <p className="text-gray-500 text-sm mt-2 mb-4">
-                Upload Back Side of CNIC
-              </p>
+                <h2 className="text-2xl font-bold text-white mb-2">
+                  🚀 Submit Verification
+                </h2>
 
-              <input
-                type="file"
-                className="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-green-600 file:text-white hover:file:bg-green-700"
-                onChange={(e) =>
-                  setVerification({
-                    ...verification,
-                    cnic_back:
-                      e.target.files[0],
-                  })
-                }
-              />
+                <p className="text-blue-100 mb-6">
+                  Your documents will be reviewed by our verification team.
+                  Verification usually takes less than 24 hours.
+                </p>
 
-            </div>
+                <button
+                  onClick={uploadVerification}
+                  className="w-full bg-white text-blue-700 font-bold py-4 rounded-2xl text-lg hover:scale-105 hover:shadow-xl transition-all duration-300"
+                >
+                  ✅ Upload & Verify My Account
+                </button>
 
-            <div className="border-2 border-dashed border-purple-300 rounded-2xl p-6 text-center hover:border-purple-500 transition">
+              </div>
+            </>
+          )}
 
-              <div className="w-20 h-20 mx-auto rounded-full bg-purple-100 flex items-center justify-center text-4xl mb-4">
-                🤳
+          {/* =========================
+              PENDING
+          ========================= */}
+
+          {verificationStatus?.verification_status === "pending" && (
+            <div className="bg-yellow-50 border-2 border-yellow-300 rounded-3xl p-8">
+
+              <div className="text-center">
+
+                <div className="text-6xl mb-4">
+                  ⏳
+                </div>
+
+                <h3 className="text-2xl font-bold text-yellow-700">
+                  Verification Under Review
+                </h3>
+
+                <p className="text-yellow-700 mt-3">
+                  Your identity documents have been submitted successfully.
+                  Our verification team is currently reviewing your documents.
+                </p>
+
+                <div className="mt-6 inline-block bg-yellow-100 text-yellow-800 px-6 py-3 rounded-full font-bold">
+                  STATUS: PENDING
+                </div>
+
               </div>
 
-              <h3 className="font-bold text-lg">
-                Selfie Verification
-              </h3>
+            </div>
+          )}
 
-              <p className="text-gray-500 text-sm mt-2 mb-4">
-                Upload a clear selfie for identity
-                verification
-              </p>
+          {/* =========================
+              APPROVED
+          ========================= */}
 
-              <input
-                type="file"
-                className="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-purple-600 file:text-white hover:file:bg-purple-700"
-                onChange={(e) =>
-                  setVerification({
-                    ...verification,
-                    selfie:
-                      e.target.files[0],
-                  })
-                }
-              />
+          {verificationStatus?.verification_status === "approved" && (
+            <div className="bg-green-50 border-2 border-green-300 rounded-3xl p-8">
+
+              <div className="text-center">
+
+                <div className="text-6xl mb-4">
+                  ✅
+                </div>
+
+                <h3 className="text-2xl font-bold text-green-700">
+                  Identity Verified Successfully
+                </h3>
+
+                <p className="text-green-700 mt-3">
+                  Your identity has been successfully verified by our
+                  verification team.
+                </p>
+
+                <div className="mt-6 inline-block bg-green-100 text-green-800 px-6 py-3 rounded-full font-bold">
+                  ✓ VERIFIED WORKER
+                </div>
+
+              </div>
 
             </div>
+          )}
 
-          </div>
+          {/* =========================
+              REJECTED
+          ========================= */}
 
-          <div className="mt-10 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-3xl p-8 shadow-2xl">
+          {verificationStatus?.verification_status === "rejected" && (
+            <>
+              <div className="bg-red-50 border-2 border-red-300 rounded-3xl p-8 mb-8">
 
-            <h2 className="text-2xl font-bold text-white mb-2">
-              🚀 Submit Verification
-            </h2>
+                <div className="text-center">
 
-            <p className="text-blue-100 mb-6">
-              Your documents will be reviewed by
-              our verification team. Verification
-              usually takes less than 24 hours.
-            </p>
+                  <div className="text-6xl mb-4">
+                    ❌
+                  </div>
 
-            <button
-              onClick={
-                uploadVerification
-              }
-              className="w-full bg-white text-blue-700 font-bold py-4 rounded-2xl text-lg hover:scale-105 hover:shadow-xl transition-all duration-300"
-            >
-              ✅ Upload & Verify My Account
-            </button>
+                  <h3 className="text-2xl font-bold text-red-700">
+                    Verification Rejected
+                  </h3>
 
-          </div>
+                  <p className="text-red-700 mt-3">
+                    Your previous verification submission was rejected.
+                    Please review the reason below and submit your documents again.
+                  </p>
+
+                  <div className="mt-6 bg-white border border-red-200 rounded-2xl p-5 text-left">
+
+                    <p className="font-bold text-red-700 mb-2">
+                      Rejection Reason
+                    </p>
+
+                    <p className="text-gray-700">
+                      {verificationStatus.rejection_reason ||
+                        "No rejection reason was provided."}
+                    </p>
+
+                  </div>
+
+                  <div className="mt-5 inline-block bg-red-100 text-red-800 px-6 py-3 rounded-full font-bold">
+                    STATUS: REJECTED
+                  </div>
+
+                </div>
+
+              </div>
+
+              {/* RE-SUBMIT FORM */}
+
+              <div className="border-t pt-8">
+
+                <h3 className="text-2xl font-bold text-gray-800 mb-2">
+                  🔄 Re-submit Verification
+                </h3>
+
+                <p className="text-gray-500 mb-6">
+                  Upload your corrected documents below.
+                </p>
+
+                <div className="mb-6">
+
+                  <label className="block font-semibold mb-2">
+                    CNIC Number
+                  </label>
+
+                  <input
+                    type="text"
+                    value={verification.cnic}
+                    onChange={(e) =>
+                      setVerification({
+                        ...verification,
+                        cnic: e.target.value,
+                      })
+                    }
+                    placeholder="35202-1234567-1"
+                    className="w-full border rounded-xl p-3 focus:ring-2 focus:ring-blue-500"
+                  />
+
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+
+                  {/* CNIC FRONT */}
+
+                  <div className="border-2 border-dashed border-blue-300 rounded-2xl p-6 text-center">
+
+                    <div className="text-4xl mb-4">
+                      📄
+                    </div>
+
+                    <h3 className="font-bold text-lg">
+                      CNIC Front
+                    </h3>
+
+                    <p className="text-gray-500 text-sm mt-2 mb-4">
+                      Upload clear CNIC front image
+                    </p>
+
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-blue-600 file:text-white"
+                      onChange={(e) =>
+                        setVerification({
+                          ...verification,
+                          cnic_front: e.target.files[0],
+                        })
+                      }
+                    />
+
+                  </div>
+
+                  {/* CNIC BACK */}
+
+                  <div className="border-2 border-dashed border-green-300 rounded-2xl p-6 text-center">
+
+                    <div className="text-4xl mb-4">
+                      📄
+                    </div>
+
+                    <h3 className="font-bold text-lg">
+                      CNIC Back
+                    </h3>
+
+                    <p className="text-gray-500 text-sm mt-2 mb-4">
+                      Upload clear CNIC back image
+                    </p>
+
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-green-600 file:text-white"
+                      onChange={(e) =>
+                        setVerification({
+                          ...verification,
+                          cnic_back: e.target.files[0],
+                        })
+                      }
+                    />
+
+                  </div>
+
+                  {/* SELFIE */}
+
+                  <div className="border-2 border-dashed border-purple-300 rounded-2xl p-6 text-center">
+
+                    <div className="text-4xl mb-4">
+                      🤳
+                    </div>
+
+                    <h3 className="font-bold text-lg">
+                      Selfie Verification
+                    </h3>
+
+                    <p className="text-gray-500 text-sm mt-2 mb-4">
+                      Upload a clear selfie
+                    </p>
+
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-purple-600 file:text-white"
+                      onChange={(e) =>
+                        setVerification({
+                          ...verification,
+                          selfie: e.target.files[0],
+                        })
+                      }
+                    />
+
+                  </div>
+
+                </div>
+
+                <div className="mt-8">
+
+                  <button
+                    onClick={uploadVerification}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl text-lg shadow-lg transition"
+                  >
+                    🔄 Re-submit Verification
+                  </button>
+
+                </div>
+
+              </div>
+            </>
+          )}
 
         </div>
 

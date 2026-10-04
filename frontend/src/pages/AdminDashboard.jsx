@@ -73,42 +73,81 @@ function AdminDashboard() {
   };
 
   // =========================================
-  // APPROVE / REJECT WORKER
-  // =========================================
+// APPROVE / REJECT WORKER
+// =========================================
 
-  const verifyWorker = async (workerId, action) => {
-    const token = localStorage.getItem("access");
+const verifyWorker = async (workerId, action) => {
+  const token = localStorage.getItem("access");
 
-    try {
-      const response = await fetch(
-        `http://127.0.0.1:8000/api/admin/verify-worker/${workerId}/`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: "Bearer " + token,
-          },
-          body: JSON.stringify({
-            action: action,
-          }),
-        }
-      );
+  // =========================
+  // REJECTION REASON
+  // =========================
 
-      const data = await response.json();
+  let rejectionReason = "";
 
-      console.log("Verification Response:", data);
+  if (action === "reject") {
+    rejectionReason = window.prompt(
+      "Please enter the rejection reason:"
+    );
 
-      alert(data.message || data.error);
-
-      if (response.ok) {
-        loadPendingWorkers();
-        loadDashboardStats();
-      }
-    } catch (error) {
-      console.error("Verification error:", error);
-      alert("Unable to process verification.");
+    if (rejectionReason === null) {
+      return;
     }
-  };
+
+    rejectionReason = rejectionReason.trim();
+
+    if (!rejectionReason) {
+      alert("Rejection reason is required.");
+      return;
+    }
+  }
+
+  try {
+    const response = await fetch(
+      `http://127.0.0.1:8000/api/admin/verify-worker/${workerId}/`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + token,
+        },
+        body: JSON.stringify({
+          action: action,
+          ...(action === "reject" && {
+            rejection_reason: rejectionReason,
+          }),
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    console.log(
+      "Verification Response:",
+      data
+    );
+
+    alert(
+      data.message ||
+        data.error ||
+        "Verification processed."
+    );
+
+    if (response.ok) {
+      loadPendingWorkers();
+      loadDashboardStats();
+    }
+  } catch (error) {
+    console.error(
+      "Verification error:",
+      error
+    );
+
+    alert(
+      "Unable to process verification."
+    );
+  }
+};
 
   // =========================================
   // LOAD DATA
