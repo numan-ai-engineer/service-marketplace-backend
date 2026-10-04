@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+
 import GoogleMapComponent from "../components/GoogleMap";
 
 function WorkerDashboard() {
@@ -9,10 +10,12 @@ function WorkerDashboard() {
   // =========================
   // NEW BOOKING ALERT
   // =========================
+
   const [newBooking, setNewBooking] = useState(null);
+  const [verificationStatus, setVerificationStatus] = useState(null);
 
   const knownBookingIds = useRef(new Set());
-const dashboardLoadedOnce = useRef(false);
+  const dashboardLoadedOnce = useRef(false);
 
   const [verification, setVerification] = useState({
     cnic: "",
@@ -68,39 +71,39 @@ const dashboardLoadedOnce = useRef(false);
 
       const bookings = data?.bookings || [];
 
-if (!dashboardLoadedOnce.current) {
-  bookings.forEach((booking) => {
-    knownBookingIds.current.add(booking.id);
-  });
+      if (!dashboardLoadedOnce.current) {
+        bookings.forEach((booking) => {
+          knownBookingIds.current.add(booking.id);
+        });
 
-  dashboardLoadedOnce.current = true;
+        dashboardLoadedOnce.current = true;
 
-  console.log(
-    "📋 INITIAL BOOKING IDS:",
-    [...knownBookingIds.current]
-  );
-} else {
-  const latestBooking = bookings.find(
-    (booking) =>
-      !knownBookingIds.current.has(booking.id) &&
-      booking.status === "pending"
-  );
+        console.log(
+          "📋 INITIAL BOOKING IDS:",
+          [...knownBookingIds.current]
+        );
+      } else {
+        const latestBooking = bookings.find(
+          (booking) =>
+            !knownBookingIds.current.has(booking.id) &&
+            booking.status === "pending"
+        );
 
-  if (latestBooking) {
-    console.log(
-      "🔔 NEW BOOKING DETECTED:",
-      latestBooking
-    );
+        if (latestBooking) {
+          console.log(
+            "🔔 NEW BOOKING DETECTED:",
+            latestBooking
+          );
 
-    setNewBooking(latestBooking);
-  }
+          setNewBooking(latestBooking);
+        }
 
-  bookings.forEach((booking) => {
-    knownBookingIds.current.add(booking.id);
-  });
-}
+        bookings.forEach((booking) => {
+          knownBookingIds.current.add(booking.id);
+        });
+      }
 
-setDashboard(data);
+      setDashboard(data);
 
       // Sync frontend online status with Django
       setIsOnline(Boolean(data.is_online));
@@ -110,11 +113,61 @@ setDashboard(data);
   };
 
   // =========================
+  // LOAD VERIFICATION STATUS
+  // =========================
+
+  const loadVerificationStatus = async () => {
+    const token = localStorage.getItem("access");
+
+    if (!token) {
+      console.log(
+        "NO ACCESS TOKEN FOR VERIFICATION STATUS"
+      );
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        "http://127.0.0.1:8000/api/worker/verification-status/",
+        {
+          method: "GET",
+          headers: {
+            Authorization: "Bearer " + token,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      console.log(
+        "VERIFICATION STATUS:",
+        data
+      );
+
+      if (!response.ok) {
+        console.error(
+          "VERIFICATION STATUS ERROR:",
+          data
+        );
+        return;
+      }
+
+      setVerificationStatus(data);
+    } catch (error) {
+      console.error(
+        "LOAD VERIFICATION STATUS ERROR:",
+        error
+      );
+    }
+  };
+
+  // =========================
   // INITIAL LOAD
   // =========================
 
   useEffect(() => {
     loadDashboard();
+    loadVerificationStatus();
   }, []);
 
   // =========================
@@ -123,7 +176,10 @@ setDashboard(data);
 
   useEffect(() => {
     const bookingRefresh = setInterval(() => {
-      console.log("🔄 AUTO BOOKING REFRESH RUNNING");
+      console.log(
+        "🔄 AUTO BOOKING REFRESH RUNNING"
+      );
+
       loadDashboard();
     }, 5000);
 
@@ -136,7 +192,10 @@ setDashboard(data);
   // UPDATE WORKER LOCATION
   // =========================
 
-  const updateLocation = async (latitude, longitude) => {
+  const updateLocation = async (
+    latitude,
+    longitude
+  ) => {
     const token = localStorage.getItem("access");
 
     // =========================================
@@ -313,7 +372,9 @@ setDashboard(data);
 
       const data = await response.json();
 
-      alert(data.message || data.error);
+      alert(
+        data.message || data.error
+      );
 
       loadDashboard();
     } catch (error) {
@@ -513,6 +574,7 @@ setDashboard(data);
         );
 
         loadDashboard();
+        loadVerificationStatus();
       } else {
         alert(
           data.error ||
