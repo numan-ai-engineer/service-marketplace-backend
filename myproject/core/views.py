@@ -637,6 +637,32 @@ def update_booking_status(request, pk):
 
     if new_status == "accepted":
 
+        # =================================================
+        # WORKER VERIFICATION CHECK
+        # =================================================
+
+        try:
+            worker_profile = WorkerProfile.objects.get(user=request.user)
+        except WorkerProfile.DoesNotExist:
+            return Response(
+                {
+                    "error": "Worker profile not found."
+                },
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if not worker_profile.is_verified:
+            return Response(
+                {
+                    "error": (
+                        "Your account is not verified. "
+                        "Please complete identity verification "
+                        "and wait for admin approval before accepting bookings."
+                    )
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         if booking.status != "pending":
             return Response(
                 {
@@ -664,6 +690,88 @@ def update_booking_status(request, pk):
             },
             status=status.HTTP_200_OK,
         )
+
+    # =====================================================
+    # REJECT
+    # =====================================================
+
+    if new_status == "rejected":
+
+        if booking.status != "pending":
+            return Response(
+                {
+                    "error": (
+                        "Only pending bookings can be rejected."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        booking.status = "rejected"
+        booking.save(update_fields=["status"])
+
+        # Notify customer
+        Notification.objects.create(
+            user=booking.customer,
+            booking=booking,
+            message="Worker rejected your booking request."
+        )
+
+        return Response(
+            {
+                "message": "Booking rejected successfully.",
+                "status": booking.status,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    # =====================================================
+    # COMPLETE
+    # =====================================================
+
+    if new_status == "completed":
+
+        if booking.status != "accepted":
+            return Response(
+                {
+                    "error": (
+                        "Only accepted bookings can be completed."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        booking.status = "completed"
+        booking.save(update_fields=["status"])
+
+        # Notify customer
+        Notification.objects.create(
+            user=booking.customer,
+            booking=booking,
+            message="Your booking has been completed."
+        )
+
+        return Response(
+            {
+                "message": "Booking completed successfully.",
+                "status": booking.status,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    # =====================================================
+    # INVALID STATUS
+    # =====================================================
+
+    return Response(
+        {
+            "error": (
+                "Invalid status. Allowed statuses are: "
+                "accepted, rejected, completed, cancelled."
+            )
+        },
+        status=status.HTTP_400_BAD_REQUEST,
+    )
 
     # =====================================================
     # REJECT
