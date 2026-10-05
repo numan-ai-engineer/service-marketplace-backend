@@ -73,29 +73,174 @@ class WorkerProfileViewSet(viewsets.ModelViewSet):
             WorkerProfile.objects
             .filter(
                 is_online=True,
+                is_available=True,
+                is_verified=True,
+            )
+            .exclude(
+                latitude=0,
+                longitude=0,
             )
             .select_related("user")
             .prefetch_related("services")
         )
 
+        # -------------------------------------------------
+        # CITY FILTER
+        # -------------------------------------------------
+
         city = self.request.query_params.get("city")
-        service = self.request.query_params.get("service")
 
         if city:
             queryset = queryset.filter(
                 city__icontains=city
             )
 
+        # -------------------------------------------------
+        # SERVICE FILTER
+        # -------------------------------------------------
+
+        service = self.request.query_params.get("service")
+
         if service:
             queryset = queryset.filter(
                 services__name__icontains=service
             )
 
-        return queryset
+        # -------------------------------------------------
+        # GPS RADIUS FILTER
+        # -------------------------------------------------
 
-# =========================================================
+        latitude = self.request.query_params.get("latitude")
+        longitude = self.request.query_params.get("longitude")
+        radius = self.request.query_params.get("radius")
+
+        if latitude and longitude and radius:
+
+            try:
+                latitude = float(latitude)
+                longitude = float(longitude)
+                radius = float(radius)
+
+            except (ValueError, TypeError):
+
+                return queryset.none()
+
+            # ---------------------------------------------
+            # VALIDATE CUSTOMER GPS
+            # ---------------------------------------------
+
+            if not (
+                -90 <= latitude <= 90
+                and -180 <= longitude <= 180
+            ):
+                return queryset.none()
+
+            # ---------------------------------------------
+            # VALIDATE RADIUS
+            # ---------------------------------------------
+
+            if radius <= 0:
+                return queryset.none()
+
+            # ---------------------------------------------
+            # CALCULATE DISTANCE
+            # ---------------------------------------------
+
+            def calculate_distance(worker):
+
+                lat1 = radians(latitude)
+                lon1 = radians(longitude)
+
+                lat2 = radians(
+                    float(worker.latitude)
+                )
+
+                lon2 = radians(
+                    float(worker.longitude)
+                )
+
+                dlat = lat2 - lat1
+                dlon = lon2 - lon1
+
+                a = (
+                    sin(dlat / 2) ** 2
+                    +
+                    cos(lat1)
+                    * cos(lat2)
+                    * sin(dlon / 2) ** 2
+                )
+
+                c = 2 * atan2(
+                    sqrt(a),
+                    sqrt(1 - a),
+                )
+
+                earth_radius_km = 6371.0
+
+                return earth_radius_km * c
+
+            # ---------------------------------------------
+            # FIND WORKERS WITHIN RADIUS
+            # ---------------------------------------------
+
+            nearby_worker_ids = []
+
+            for worker in queryset:
+
+                try:
+                    worker_latitude = float(
+                        worker.latitude
+                    )
+
+                    worker_longitude = float(
+                        worker.longitude
+                    )
+
+                except (TypeError, ValueError):
+
+                    continue
+
+                # -----------------------------------------
+                # IGNORE INVALID GPS
+                # -----------------------------------------
+
+                if not (
+                    -90 <= worker_latitude <= 90
+                    and -180 <= worker_longitude <= 180
+                ):
+                    continue
+
+                # -----------------------------------------
+                # CALCULATE DISTANCE
+                # -----------------------------------------
+
+                distance = calculate_distance(
+                    worker
+                )
+
+                # -----------------------------------------
+                # RADIUS CHECK
+                # -----------------------------------------
+
+                if distance <= radius:
+
+                    nearby_worker_ids.append(
+                        worker.id
+                    )
+
+            # ---------------------------------------------
+            # RETURN QUERYSET
+            # ---------------------------------------------
+
+            return queryset.filter(
+                id__in=nearby_worker_ids
+            )
+
+        return queryset
+    
+# =====================================================
 # NEARBY WORKERS API
-# =========================================================
+# =====================================================
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
@@ -116,12 +261,20 @@ def nearby_workers(request):
         )
 
     # -----------------------------------------------------
-    # GET CUSTOMER LOCATION FROM DATABASE
+    # GET CUSTOMER LOCATION
     # -----------------------------------------------------
 
     try:
         customer_location = CustomerLocation.objects.get(
             customer=request.user
+        )
+
+        customer_latitude = float(
+            customer_location.latitude
+        )
+
+        customer_longitude = float(
+            customer_location.longitude
         )
 
     except CustomerLocation.DoesNotExist:
@@ -135,42 +288,83 @@ def nearby_workers(request):
             status=status.HTTP_404_NOT_FOUND,
         )
 
-    customer_latitude = float(
-        customer_location.latitude
-    )
+    except (TypeError, ValueError):
+        return Response(
+            {
+                "error": "Customer GPS location is invalid."
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
-    customer_longitude = float(
-        customer_location.longitude
-    )
+    # -----------------------------------------------------
+    # VALIDATE CUSTOMER GPS
+    # -----------------------------------------------------
+
+    if not (
+        -90 <= customer_latitude <= 90
+        and -180 <= customer_longitude <= 180
+    ):
+        return Response(
+            {
+                "error": "Customer GPS coordinates are invalid."
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     # -----------------------------------------------------
     # SEARCH RADIUS
+    # Default = 5 KM
     # -----------------------------------------------------
 
-    radius_km = 5.0
+    try:
+        radius_km = float(
+            request.query_params.get("radius", 5)
+        )
+    except (TypeError, ValueError):
+        return Response(
+            {
+                "error": "Radius must be a valid number."
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if radius_km <= 0:
+        return Response(
+            {
+                "error": "Radius must be greater than 0."
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     # -----------------------------------------------------
-    # GET ONLINE WORKERS
+    # GET ONLINE + AVAILABLE + VERIFIED WORKERS
     # -----------------------------------------------------
 
     workers = (
         WorkerProfile.objects
         .filter(
-    is_online=True,
-)
+            is_online=True,
+            is_available=True,
+            is_verified=True,
+        )
         .select_related("user")
         .prefetch_related("services")
     )
 
     print("=================================")
     print(
-        "ONLINE WORKERS:",
+        "ELIGIBLE WORKERS:",
         workers.count()
     )
     print(
         "CUSTOMER LOCATION:",
         customer_latitude,
         customer_longitude
+    )
+    print(
+        "SEARCH RADIUS:",
+        radius_km,
+        "KM"
     )
     print("=================================")
 
@@ -188,17 +382,30 @@ def nearby_workers(request):
         )
 
         # -------------------------------------------------
-        # USE WORKER PROFILE GPS
+        # GET LIVE WORKER LOCATION
         # -------------------------------------------------
 
         try:
+            worker_location = WorkerLocation.objects.get(
+                worker=worker
+            )
+
             worker_latitude = float(
-                worker.latitude
+                worker_location.latitude
             )
 
             worker_longitude = float(
-                worker.longitude
+                worker_location.longitude
             )
+
+        except WorkerLocation.DoesNotExist:
+
+            print(
+                "NO LIVE LOCATION:",
+                worker.user.username
+            )
+
+            continue
 
         except (TypeError, ValueError):
 
@@ -210,23 +417,23 @@ def nearby_workers(request):
             continue
 
         # -------------------------------------------------
-        # IGNORE DEFAULT 0,0 LOCATION
+        # VALIDATE WORKER GPS
         # -------------------------------------------------
 
-        if (
-            worker_latitude == 0
-            and worker_longitude == 0
+        if not (
+            -90 <= worker_latitude <= 90
+            and -180 <= worker_longitude <= 180
         ):
 
             print(
-                "WORKER HAS NO GPS:",
+                "WORKER GPS OUT OF RANGE:",
                 worker.user.username
             )
 
             continue
 
         # -------------------------------------------------
-        # HAVERSINE FORMULA
+        # HAVERSINE DISTANCE
         # -------------------------------------------------
 
         earth_radius_km = 6371.0
@@ -274,7 +481,7 @@ def nearby_workers(request):
         )
 
         # -------------------------------------------------
-        # 5 KM RADIUS
+        # RADIUS FILTER
         # -------------------------------------------------
 
         if distance_km > radius_km:
@@ -316,15 +523,12 @@ def nearby_workers(request):
                 "name": worker.user.username,
 
                 "user": {
-                    "name":
-                        worker.user.username,
+                    "name": worker.user.username,
                 },
 
-                "phone":
-                    worker.user.phone,
+                "phone": worker.user.phone,
 
-                "city":
-                    worker.city,
+                "city": worker.city,
 
                 "experience_years":
                     worker.experience_years,
@@ -342,10 +546,22 @@ def nearby_workers(request):
                     worker.is_verified,
 
                 "latitude":
-                    worker.latitude,
+                    worker_location.latitude,
 
                 "longitude":
-                    worker.longitude,
+                    worker_location.longitude,
+
+                "accuracy":
+                    worker_location.accuracy,
+
+                "speed":
+                    worker_location.speed,
+
+                "heading":
+                    worker_location.heading,
+
+                "updated_at":
+                    worker_location.updated_at,
 
                 "distance_km":
                     round(
@@ -399,12 +615,12 @@ def nearby_workers(request):
         status=status.HTTP_200_OK,
     )
 
-
 # =========================
 # BOOKING API
 # =========================
 
 class BookingViewSet(viewsets.ModelViewSet):
+
     queryset = Booking.objects.all()
     serializer_class = BookingSerializer
     permission_classes = [IsAuthenticated]
@@ -414,45 +630,100 @@ class BookingViewSet(viewsets.ModelViewSet):
     http_method_names = ["get", "post", "head", "options"]
 
     def get_queryset(self):
+
         user = self.request.user
 
+        # CUSTOMER BOOKINGS
         if user.role == "customer":
-            return Booking.objects.filter(
-                customer=user
-            ).select_related("worker", "service")
 
+            return (
+                Booking.objects
+                .filter(
+                    customer=user
+                )
+                .select_related(
+                    "worker",
+                    "service"
+                )
+            )
+
+        # WORKER BOOKINGS
         if user.role == "worker":
-            return Booking.objects.filter(
-                worker=user
-            ).select_related("customer", "service")
 
+            return (
+                Booking.objects
+                .filter(
+                    worker=user
+                )
+                .select_related(
+                    "customer",
+                    "service"
+                )
+            )
+
+        # OTHER USERS
         return Booking.objects.none()
 
     def perform_create(self, serializer):
 
-        # صرف customer booking create کر سکتا ہے
+        # -------------------------------------------------
+        # CUSTOMER ONLY
+        # -------------------------------------------------
+
         if self.request.user.role != "customer":
+
             raise ValidationError(
-                {"error": "Only customers can create bookings."}
+                {
+                    "error":
+                    "Only customers can create bookings."
+                }
             )
+
+        # -------------------------------------------------
+        # GET SERVICE AND WORKER IDs
+        # -------------------------------------------------
 
         service_id = self.request.data.get("service")
         worker_id = self.request.data.get("worker")
 
+        # -------------------------------------------------
+        # VALIDATE SERVICE
+        # -------------------------------------------------
+
         if not service_id:
+
             raise ValidationError(
-                {"service": "Service is required"}
+                {
+                    "service":
+                    "Service is required"
+                }
             )
 
+        # -------------------------------------------------
+        # VALIDATE WORKER
+        # -------------------------------------------------
+
         if not worker_id:
+
             raise ValidationError(
-                {"worker": "Worker is required"}
+                {
+                    "worker":
+                    "Worker is required"
+                }
             )
+
+        # -------------------------------------------------
+        # GET SERVICE
+        # -------------------------------------------------
 
         service_obj = get_object_or_404(
             Service,
             id=service_id
         )
+
+        # -------------------------------------------------
+        # GET VERIFIED / AVAILABLE / ONLINE WORKER
+        # -------------------------------------------------
 
         worker = get_object_or_404(
             WorkerProfile,
@@ -462,13 +733,24 @@ class BookingViewSet(viewsets.ModelViewSet):
             is_verified=True,
         )
 
-        # Check worker provides selected service
+        # -------------------------------------------------
+        # CHECK WORKER PROVIDES SELECTED SERVICE
+        # -------------------------------------------------
+
         if not worker.services.filter(
             id=service_obj.id
         ).exists():
+
             raise ValidationError(
-                {"error": "Worker does not provide this service"}
+                {
+                    "error":
+                    "Worker does not provide this service"
+                }
             )
+
+        # -------------------------------------------------
+        # CREATE BOOKING
+        # -------------------------------------------------
 
         serializer.save(
             customer=self.request.user,
@@ -477,12 +759,18 @@ class BookingViewSet(viewsets.ModelViewSet):
             status="pending",
         )
 
+        # -------------------------------------------------
+        # CREATE WORKER NOTIFICATION
+        # -------------------------------------------------
+
         Notification.objects.create(
             user=worker.user,
             booking=serializer.instance,
-            message=f"You have received a new booking for {service_obj.name} service."
+            message=(
+                f"You have received a new booking "
+                f"for {service_obj.name} service."
+            ),
         )
-
 
 # =========================
 # REVIEW API
@@ -497,28 +785,104 @@ class ReviewViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewSerializer
 
     def get_object(self):
+
         review = super().get_object()
 
+        # ---------------------------------------------
+        # ONLY REVIEW OWNER CAN EDIT
+        # ---------------------------------------------
+
         if review.customer != self.request.user:
+
             raise ValidationError(
-                {"error": "You can edit only your own review."}
+                {
+                    "error":
+                    "You can edit only your own review."
+                }
             )
 
         return review
 
     def perform_create(self, serializer):
 
+        # ---------------------------------------------
+        # CUSTOMER ONLY
+        # ---------------------------------------------
+
+        if self.request.user.role != "customer":
+
+            raise ValidationError(
+                {
+                    "error":
+                    "Only customers can create reviews."
+                }
+            )
+
+        # ---------------------------------------------
+        # GET BOOKING ID
+        # ---------------------------------------------
+
         booking_id = self.request.data.get("booking")
+
+        if not booking_id:
+
+            raise ValidationError(
+                {
+                    "booking":
+                    "Booking is required."
+                }
+            )
+
+        # ---------------------------------------------
+        # GET CUSTOMER'S BOOKING
+        # ---------------------------------------------
 
         booking = get_object_or_404(
             Booking,
-            id=booking_id
+            id=booking_id,
+            customer=self.request.user,
         )
+
+        # ---------------------------------------------
+        # BOOKING MUST BE COMPLETED
+        # ---------------------------------------------
+
+        if booking.status != "completed":
+
+            raise ValidationError(
+                {
+                    "error":
+                    "You can review a booking only after it is completed."
+                }
+            )
+
+        # ---------------------------------------------
+        # GET WORKER PROFILE
+        # ---------------------------------------------
 
         worker_profile = get_object_or_404(
             WorkerProfile,
             user=booking.worker
         )
+
+        # ---------------------------------------------
+        # PREVENT DUPLICATE REVIEW
+        # ---------------------------------------------
+
+        if Review.objects.filter(
+            booking=booking
+        ).exists():
+
+            raise ValidationError(
+                {
+                    "error":
+                    "You have already reviewed this booking."
+                }
+            )
+
+        # ---------------------------------------------
+        # CREATE REVIEW
+        # ---------------------------------------------
 
         serializer.save(
             customer=self.request.user,
@@ -526,18 +890,35 @@ class ReviewViewSet(viewsets.ModelViewSet):
             booking=booking,
         )
 
+        # ---------------------------------------------
+        # RECALCULATE WORKER RATING
+        # ---------------------------------------------
+
         average_rating = Review.objects.filter(
             worker=worker_profile
         ).aggregate(
             Avg("rating")
         )
 
-        worker_profile.rating = average_rating["rating__avg"] or 0
-        worker_profile.save()
+        worker_profile.rating = (
+            average_rating["rating__avg"] or 0
+        )
+
+        worker_profile.save(
+            update_fields=["rating"]
+        )
 
     def perform_update(self, serializer):
 
+        # ---------------------------------------------
+        # UPDATE REVIEW
+        # ---------------------------------------------
+
         review = serializer.save()
+
+        # ---------------------------------------------
+        # RECALCULATE WORKER RATING
+        # ---------------------------------------------
 
         average_rating = Review.objects.filter(
             worker=review.worker
@@ -545,8 +926,13 @@ class ReviewViewSet(viewsets.ModelViewSet):
             Avg("rating")
         )
 
-        review.worker.rating = average_rating["rating__avg"] or 0
-        review.worker.save()
+        review.worker.rating = (
+            average_rating["rating__avg"] or 0
+        )
+
+        review.worker.save(
+            update_fields=["rating"]
+        )
 
 # =========================
 # PROTECTED TEST API
@@ -560,13 +946,17 @@ def test_protected(request):
         "role": request.user.role
     })
 
-
 # =========================
 # UPDATE BOOKING STATUS
 # =========================
+
 @api_view(["PATCH"])
 @permission_classes([IsAuthenticated])
 def update_booking_status(request, pk):
+
+    # -----------------------------------------------------
+    # GET BOOKING
+    # -----------------------------------------------------
 
     booking = get_object_or_404(
         Booking,
@@ -575,193 +965,259 @@ def update_booking_status(request, pk):
 
     new_status = request.data.get("status")
 
-    # =====================================================
+    # -----------------------------------------------------
     # CUSTOMER CANCEL
-    # =====================================================
+    # -----------------------------------------------------
 
     if new_status == "cancelled":
 
         if booking.customer != request.user:
+
             return Response(
                 {
-                    "error": "You can cancel only your own booking."
+                    "error":
+                    "You can cancel only your own booking."
                 },
                 status=status.HTTP_403_FORBIDDEN,
             )
 
         if booking.status != "pending":
+
             return Response(
                 {
-                    "error": (
-                        "Only pending bookings can be cancelled."
-                    )
+                    "error":
+                    "Only pending bookings can be cancelled."
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         booking.status = "cancelled"
-        booking.save(update_fields=["status"])
 
-        # Notify worker
+        booking.save(
+            update_fields=["status"]
+        )
+
+        # -------------------------------------------------
+        # NOTIFY WORKER
+        # -------------------------------------------------
+
         Notification.objects.create(
             user=booking.worker,
             booking=booking,
-            message="Customer cancelled the booking."
+            message="Customer cancelled the booking.",
         )
 
         return Response(
             {
-                "message": "Booking cancelled successfully.",
-                "status": booking.status,
+                "message":
+                "Booking cancelled successfully.",
+
+                "status":
+                booking.status,
             },
             status=status.HTTP_200_OK,
         )
 
-    # =====================================================
+    # -----------------------------------------------------
     # WORKER ONLY
-    # =====================================================
+    # -----------------------------------------------------
 
     if booking.worker != request.user:
+
         return Response(
             {
-                "error": (
-                    "You are not allowed to update this booking."
-                )
+                "error":
+                "You are not allowed to update this booking."
             },
             status=status.HTTP_403_FORBIDDEN,
         )
 
-    # =====================================================
+    # -----------------------------------------------------
     # ACCEPT
-    # =====================================================
+    # -----------------------------------------------------
 
     if new_status == "accepted":
 
-        # =================================================
-        # WORKER VERIFICATION CHECK
-        # =================================================
+        # ---------------------------------------------
+        # GET WORKER PROFILE
+        # ---------------------------------------------
 
         try:
-            worker_profile = WorkerProfile.objects.get(user=request.user)
+
+            worker_profile = WorkerProfile.objects.get(
+                user=request.user
+            )
+
         except WorkerProfile.DoesNotExist:
+
             return Response(
                 {
-                    "error": "Worker profile not found."
+                    "error":
+                    "Worker profile not found."
                 },
                 status=status.HTTP_404_NOT_FOUND,
             )
 
+        # ---------------------------------------------
+        # WORKER VERIFICATION
+        # ---------------------------------------------
+
         if not worker_profile.is_verified:
+
             return Response(
                 {
                     "error": (
                         "Your account is not verified. "
                         "Please complete identity verification "
-                        "and wait for admin approval before accepting bookings."
+                        "and wait for admin approval before "
+                        "accepting bookings."
                     )
                 },
                 status=status.HTTP_403_FORBIDDEN,
             )
 
+        # ---------------------------------------------
+        # BOOKING MUST BE PENDING
+        # ---------------------------------------------
+
         if booking.status != "pending":
+
             return Response(
                 {
-                    "error": (
-                        "Only pending bookings can be accepted."
-                    )
+                    "error":
+                    "Only pending bookings can be accepted."
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+        # ---------------------------------------------
+        # ACCEPT BOOKING
+        # ---------------------------------------------
 
         booking.status = "accepted"
-        booking.save(update_fields=["status"])
 
-        # Notify customer
+        booking.save(
+            update_fields=["status"]
+        )
+
+        # ---------------------------------------------
+        # NOTIFY CUSTOMER
+        # ---------------------------------------------
+
         Notification.objects.create(
             user=booking.customer,
             booking=booking,
-            message="Worker accepted your booking request."
+            message="Worker accepted your booking request.",
         )
 
         return Response(
             {
-                "message": "Booking accepted successfully.",
-                "status": booking.status,
+                "message":
+                "Booking accepted successfully.",
+
+                "status":
+                booking.status,
             },
             status=status.HTTP_200_OK,
         )
 
-    # =====================================================
+    # -----------------------------------------------------
     # REJECT
-    # =====================================================
+    # -----------------------------------------------------
 
     if new_status == "rejected":
 
         if booking.status != "pending":
+
             return Response(
                 {
-                    "error": (
-                        "Only pending bookings can be rejected."
-                    )
+                    "error":
+                    "Only pending bookings can be rejected."
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        booking.status = "rejected"
-        booking.save(update_fields=["status"])
+        # ---------------------------------------------
+        # REJECT BOOKING
+        # ---------------------------------------------
 
-        # Notify customer
+        booking.status = "rejected"
+
+        booking.save(
+            update_fields=["status"]
+        )
+
+        # ---------------------------------------------
+        # NOTIFY CUSTOMER
+        # ---------------------------------------------
+
         Notification.objects.create(
             user=booking.customer,
             booking=booking,
-            message="Worker rejected your booking request."
+            message="Worker rejected your booking request.",
         )
 
         return Response(
             {
-                "message": "Booking rejected successfully.",
-                "status": booking.status,
+                "message":
+                "Booking rejected successfully.",
+
+                "status":
+                booking.status,
             },
             status=status.HTTP_200_OK,
         )
 
-    # =====================================================
+    # -----------------------------------------------------
     # COMPLETE
-    # =====================================================
+    # -----------------------------------------------------
 
     if new_status == "completed":
 
         if booking.status != "accepted":
+
             return Response(
                 {
-                    "error": (
-                        "Only accepted bookings can be completed."
-                    )
+                    "error":
+                    "Only accepted bookings can be completed."
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        booking.status = "completed"
-        booking.save(update_fields=["status"])
+        # ---------------------------------------------
+        # COMPLETE BOOKING
+        # ---------------------------------------------
 
-        # Notify customer
+        booking.status = "completed"
+
+        booking.save(
+            update_fields=["status"]
+        )
+
+        # ---------------------------------------------
+        # NOTIFY CUSTOMER
+        # ---------------------------------------------
+
         Notification.objects.create(
             user=booking.customer,
             booking=booking,
-            message="Your booking has been completed."
+            message="Your booking has been completed.",
         )
 
         return Response(
             {
-                "message": "Booking completed successfully.",
-                "status": booking.status,
+                "message":
+                "Booking completed successfully.",
+
+                "status":
+                booking.status,
             },
             status=status.HTTP_200_OK,
         )
 
-    # =====================================================
+    # -----------------------------------------------------
     # INVALID STATUS
-    # =====================================================
+    # -----------------------------------------------------
 
     return Response(
         {
@@ -772,118 +1228,58 @@ def update_booking_status(request, pk):
         },
         status=status.HTTP_400_BAD_REQUEST,
     )
-
-    # =====================================================
-    # REJECT
-    # =====================================================
-
-    if new_status == "rejected":
-
-        if booking.status != "pending":
-            return Response(
-                {
-                    "error": (
-                        "Only pending bookings can be rejected."
-                    )
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        booking.status = "rejected"
-        booking.save(update_fields=["status"])
-
-        # Notify customer
-        Notification.objects.create(
-            user=booking.customer,
-            booking=booking,
-            message="Worker rejected your booking request."
-        )
-
-        return Response(
-            {
-                "message": "Booking rejected successfully.",
-                "status": booking.status,
-            },
-            status=status.HTTP_200_OK,
-        )
-
-    # =====================================================
-    # COMPLETE
-    # =====================================================
-
-    if new_status == "completed":
-
-        if booking.status != "accepted":
-            return Response(
-                {
-                    "error": (
-                        "Only accepted bookings can be completed."
-                    )
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        booking.status = "completed"
-        booking.save(update_fields=["status"])
-
-        # Notify customer
-        Notification.objects.create(
-            user=booking.customer,
-            booking=booking,
-            message="Your booking has been completed."
-        )
-
-        return Response(
-            {
-                "message": "Booking completed successfully.",
-                "status": booking.status,
-            },
-            status=status.HTTP_200_OK,
-        )
-
-    # =====================================================
-    # INVALID STATUS
-    # =====================================================
-
-    return Response(
-        {
-            "error": (
-                "Invalid status. Allowed statuses are: "
-                "accepted, rejected, completed, cancelled."
-            )
-        },
-        status=status.HTTP_400_BAD_REQUEST,
-    )
-
 
 # =========================
 # CUSTOMER DASHBOARD
 # =========================
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def customer_dashboard(request):
 
     bookings = Booking.objects.filter(
-        customer_id=request.user.id
+        customer=request.user
     )
 
-    return Response({
-        "customer": request.user.username,
+    return Response(
+        {
+            "customer": request.user.username,
 
-        "total_bookings": bookings.count(),
+            "total_bookings":
+                bookings.count(),
 
-        "pending": bookings.filter(status="pending").count(),
+            "pending":
+                bookings.filter(
+                    status="pending"
+                ).count(),
 
-        "accepted": bookings.filter(status="accepted").count(),
+            "accepted":
+                bookings.filter(
+                    status="accepted"
+                ).count(),
 
-        "completed": bookings.filter(status="completed").count(),
+            "completed":
+                bookings.filter(
+                    status="completed"
+                ).count(),
 
-        "cancelled": bookings.filter(status="cancelled").count(),
+            "cancelled":
+                bookings.filter(
+                    status="cancelled"
+                ).count(),
 
-        "rejected": bookings.filter(status="rejected").count(),
+            "rejected":
+                bookings.filter(
+                    status="rejected"
+                ).count(),
 
-        "bookings": BookingSerializer(bookings, many=True).data
-    })
+            "bookings":
+                BookingSerializer(
+                    bookings,
+                    many=True
+                ).data,
+        }
+    )
 
 # =========================
 # WORKER DASHBOARD
@@ -975,32 +1371,56 @@ def worker_dashboard(request):
     )
 
 # =========================
-# WORKER Notification
+# WORKER NOTIFICATION
 # =========================
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def notifications(request):
 
-    notifications = Notification.objects.filter(
-        user=request.user
-    ).order_by("-created_at")
-    notifications.filter(is_read=False).update(
-    is_read=True
-)   
+    notifications = (
+        Notification.objects
+        .filter(
+            user=request.user
+        )
+        .order_by("-created_at")
+    )
+
+    # Mark unread notifications as read
+    notifications.filter(
+        is_read=False
+    ).update(
+        is_read=True
+    )
 
     data = []
 
     for notification in notifications:
-     data.append({
-    "id": notification.id,
-    "message": notification.message,
-    "is_read": notification.is_read,
-    "created_at": notification.created_at,
-    "booking_id": notification.booking.id
-        if notification.booking else None,
-})
 
-    return Response(data)
+        data.append(
+            {
+                "id": notification.id,
+
+                "message":
+                    notification.message,
+
+                "is_read":
+                    notification.is_read,
+
+                "created_at":
+                    notification.created_at,
+
+                "booking_id":
+                    notification.booking.id
+                    if notification.booking
+                    else None,
+            }
+        )
+
+    return Response(
+        data,
+        status=status.HTTP_200_OK,
+    )
 
 # =========================================================
 # MARK NOTIFICATION AS READ
@@ -1025,7 +1445,9 @@ def mark_notification_read(request, pk):
         )
 
     notification.is_read = True
-    notification.save()
+    notification.save(
+    update_fields=["is_read"]
+)
 
     return Response(
         {
@@ -1282,15 +1704,30 @@ def upload_verification(request):
         status=200,
     )
 
+# =========================
+# PENDING WORKERS
+# =========================
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def pending_workers(request):
 
+    # -----------------------------------------------------
+    # ADMIN ONLY
+    # -----------------------------------------------------
+
     if not request.user.is_staff:
+
         return Response(
-            {"error": "Admin only"},
-            status=403
+            {
+                "error": "Admin only"
+            },
+            status=status.HTTP_403_FORBIDDEN,
         )
+
+    # -----------------------------------------------------
+    # GET PENDING WORKERS
+    # -----------------------------------------------------
 
     workers = WorkerProfile.objects.filter(
         verification_status="pending"
@@ -1298,111 +1735,185 @@ def pending_workers(request):
 
     data = []
 
+    # -----------------------------------------------------
+    # BUILD RESPONSE
+    # -----------------------------------------------------
+
     for worker in workers:
 
-      data.append({
-    "id": worker.id,
-    "name": worker.user.username,
-    "cnic": worker.cnic,
-    "status": worker.verification_status,
-    "city": worker.city,
+        data.append(
+            {
+                "id":
+                    worker.id,
 
-"experience": worker.experience_years,
+                "name":
+                    worker.user.username,
 
-"rating": worker.rating,
+                "cnic":
+                    worker.cnic,
 
-"services": [
-    service.name
-    for service in worker.services.all()
-],
+                "status":
+                    worker.verification_status,
 
-    "cnic_front": request.build_absolute_uri(worker.cnic_front.url)
-    if worker.cnic_front else None,
+                "city":
+                    worker.city,
 
-    "cnic_back": request.build_absolute_uri(worker.cnic_back.url)
-    if worker.cnic_back else None,
+                "experience":
+                    worker.experience_years,
 
-    "selfie": request.build_absolute_uri(worker.selfie.url)
-    if worker.selfie else None,
-})
+                "rating":
+                    worker.rating,
 
-    return Response(data)
+                "services": [
+                    service.name
+                    for service in worker.services.all()
+                ],
+
+                "cnic_front":
+                    request.build_absolute_uri(
+                        worker.cnic_front.url
+                    )
+                    if worker.cnic_front
+                    else None,
+
+                "cnic_back":
+                    request.build_absolute_uri(
+                        worker.cnic_back.url
+                    )
+                    if worker.cnic_back
+                    else None,
+
+                "selfie":
+                    request.build_absolute_uri(
+                        worker.selfie.url
+                    )
+                    if worker.selfie
+                    else None,
+            }
+        )
+
+    # -----------------------------------------------------
+    # RESPONSE
+    # -----------------------------------------------------
+
+    return Response(
+        data,
+        status=status.HTTP_200_OK,
+    )
+
+# =========================
+# ADMIN DASHBOARD
+# =========================
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def admin_dashboard(request):
 
+    # -----------------------------------------------------
+    # ADMIN ONLY
+    # -----------------------------------------------------
+
     if not request.user.is_staff:
+
         return Response(
-            {"error": "Admin only"},
-            status=403,
+            {
+                "error": "Admin only"
+            },
+            status=status.HTTP_403_FORBIDDEN,
         )
 
+    # -----------------------------------------------------
+    # GET WORKERS
+    # -----------------------------------------------------
+
     workers = WorkerProfile.objects.all()
-    return Response({
 
-    "total_users": User.objects.count(),
+    # -----------------------------------------------------
+    # DASHBOARD RESPONSE
+    # -----------------------------------------------------
 
-    "total_customers": User.objects.filter(
-        role="customer"
-    ).count(),
+    return Response(
+        {
+            "total_users":
+                User.objects.count(),
 
-    "total_workers": User.objects.filter(
-        role="worker"
-    ).count(),
+            "total_customers":
+                User.objects.filter(
+                    role="customer"
+                ).count(),
 
-    "pending": workers.filter(
-        verification_status="pending"
-    ).count(),
+            "total_workers":
+                User.objects.filter(
+                    role="worker"
+                ).count(),
 
-    "approved": workers.filter(
-        verification_status="approved"
-    ).count(),
+            "pending":
+                workers.filter(
+                    verification_status="pending"
+                ).count(),
 
-    "rejected": workers.filter(
-        verification_status="rejected"
-    ).count(),
+            "approved":
+                workers.filter(
+                    verification_status="approved"
+                ).count(),
 
-    "total_bookings": Booking.objects.count(),
+            "rejected":
+                workers.filter(
+                    verification_status="rejected"
+                ).count(),
 
-    "completed_bookings": Booking.objects.filter(
-        status="completed"
-    ).count(),
+            "total_bookings":
+                Booking.objects.count(),
 
-    "cancelled_bookings": Booking.objects.filter(
-        status="cancelled"
-    ).count(),
+            "completed_bookings":
+                Booking.objects.filter(
+                    status="completed"
+                ).count(),
 
-    "total_reviews": Review.objects.count(),
+            "cancelled_bookings":
+                Booking.objects.filter(
+                    status="cancelled"
+                ).count(),
 
-})
+            "total_reviews":
+                Review.objects.count(),
+        },
+        status=status.HTTP_200_OK,
+    )
+
+# =========================
+# VERIFY WORKER
+# =========================
 
 @api_view(["PATCH"])
 @permission_classes([IsAuthenticated])
 def verify_worker(request, pk):
 
-    # =====================================================
+    # -----------------------------------------------------
     # ADMIN CHECK
-    # =====================================================
+    # -----------------------------------------------------
 
     if not request.user.is_staff:
+
         return Response(
-            {"error": "Admin only"},
-            status=403,
+            {
+                "error": "Admin only"
+            },
+            status=status.HTTP_403_FORBIDDEN,
         )
 
-    # =====================================================
+    # -----------------------------------------------------
     # GET WORKER
-    # =====================================================
+    # -----------------------------------------------------
 
     worker = get_object_or_404(
         WorkerProfile,
         id=pk,
     )
 
-    # =====================================================
+    # -----------------------------------------------------
     # GET LATEST PENDING VERIFICATION
-    # =====================================================
+    # -----------------------------------------------------
 
     verification = (
         WorkerVerification.objects
@@ -1415,22 +1926,24 @@ def verify_worker(request, pk):
     )
 
     if not verification:
+
         return Response(
             {
-                "error": "No pending verification found for this worker."
+                "error":
+                "No pending verification found for this worker."
             },
-            status=404,
+            status=status.HTTP_404_NOT_FOUND,
         )
 
-    # =====================================================
-    # ACTION
-    # =====================================================
+    # -----------------------------------------------------
+    # GET ACTION
+    # -----------------------------------------------------
 
     action = request.data.get("action")
 
-    # =====================================================
+    # -----------------------------------------------------
     # APPROVE
-    # =====================================================
+    # -----------------------------------------------------
 
     if action == "approve":
 
@@ -1438,70 +1951,99 @@ def verify_worker(request, pk):
         verification.rejection_reason = None
         verification.reviewed_by = request.user
         verification.reviewed_at = timezone.now()
+
         verification.save()
 
         worker.verification_status = "approved"
         worker.is_verified = True
+
         worker.save()
 
         return Response(
             {
-                "message": "Worker verification approved successfully.",
-                "worker_id": worker.id,
-                "verification_id": verification.id,
-                "verification_status": verification.status,
-                "is_verified": worker.is_verified,
+                "message":
+                "Worker verification approved successfully.",
+
+                "worker_id":
+                worker.id,
+
+                "verification_id":
+                verification.id,
+
+                "verification_status":
+                verification.status,
+
+                "is_verified":
+                worker.is_verified,
             },
-            status=200,
+            status=status.HTTP_200_OK,
         )
 
-    # =====================================================
+    # -----------------------------------------------------
     # REJECT
-    # =====================================================
+    # -----------------------------------------------------
 
     elif action == "reject":
 
-        rejection_reason = request.data.get("rejection_reason")
+        rejection_reason = request.data.get(
+            "rejection_reason"
+        )
 
         if not rejection_reason:
+
             return Response(
                 {
-                    "error": "Rejection reason is required."
+                    "error":
+                    "Rejection reason is required."
                 },
-                status=400,
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         verification.status = "rejected"
         verification.rejection_reason = rejection_reason
         verification.reviewed_by = request.user
         verification.reviewed_at = timezone.now()
+
         verification.save()
 
         worker.verification_status = "rejected"
         worker.is_verified = False
+
         worker.save()
 
         return Response(
             {
-                "message": "Worker verification rejected.",
-                "worker_id": worker.id,
-                "verification_id": verification.id,
-                "verification_status": verification.status,
-                "rejection_reason": verification.rejection_reason,
-                "is_verified": worker.is_verified,
+                "message":
+                "Worker verification rejected.",
+
+                "worker_id":
+                worker.id,
+
+                "verification_id":
+                verification.id,
+
+                "verification_status":
+                verification.status,
+
+                "rejection_reason":
+                verification.rejection_reason,
+
+                "is_verified":
+                worker.is_verified,
             },
-            status=200,
+            status=status.HTTP_200_OK,
         )
 
-    # =====================================================
+    # -----------------------------------------------------
     # INVALID ACTION
-    # =====================================================
+    # -----------------------------------------------------
 
     return Response(
         {
-            "error": "Invalid action. Use 'approve' or 'reject'."
+            "error":
+            "Invalid action. Use 'approve' or 'reject'."
         },
-        status=400,
+        status=status.HTTP_400_BAD_REQUEST,
     )
 
 # =====================================================
@@ -1577,7 +2119,6 @@ from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
-
 @api_view(["POST"])
 def register(request):
     username = request.data.get("username")
@@ -1632,31 +2173,75 @@ def register(request):
         status=status.HTTP_201_CREATED,
     )
 
+# =========================
+# FORGOT PASSWORD
+# =========================
+
 @api_view(["POST"])
 def forgot_password(request):
+
     email = request.data.get("email")
 
+    # -----------------------------------------------------
+    # EMAIL REQUIRED
+    # -----------------------------------------------------
+
     if not email:
+
         return Response(
-            {"error": "Email is required"},
+            {
+                "error":
+                "Email is required"
+            },
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    user = User.objects.filter(email=email).first()
+    # -----------------------------------------------------
+    # FIND USER
+    # -----------------------------------------------------
+
+    user = User.objects.filter(
+        email=email
+    ).first()
 
     if not user:
+
         return Response(
-            {"error": "No account found with this email"},
+            {
+                "error":
+                "No account found with this email"
+            },
             status=status.HTTP_404_NOT_FOUND,
         )
 
-    uid = urlsafe_base64_encode(force_bytes(user.pk))
-    token = default_token_generator.make_token(user)
+    # -----------------------------------------------------
+    # CREATE RESET TOKEN
+    # -----------------------------------------------------
 
-    reset_link = f"http://localhost:5173/reset-password/{uid}/{token}"
+    uid = urlsafe_base64_encode(
+        force_bytes(user.pk)
+    )
+
+    token = default_token_generator.make_token(
+        user
+    )
+
+    # -----------------------------------------------------
+    # RESET LINK
+    # -----------------------------------------------------
+
+    reset_link = (
+        f"http://localhost:5173/"
+        f"reset-password/{uid}/{token}"
+    )
+
+    # -----------------------------------------------------
+    # SEND EMAIL
+    # -----------------------------------------------------
 
     send_mail(
         subject="Reset Your Service Marketplace Password",
+
         message=f"""
 Hello,
 
@@ -1668,14 +2253,27 @@ If you did not request this password reset, please ignore this email.
 
 Service Marketplace
 """,
+
         from_email=settings.EMAIL_HOST_USER,
-        recipient_list=[email],
+
+        recipient_list=[
+            email
+        ],
+
         fail_silently=False,
     )
 
-    return Response({
-        "message": "Password reset email sent successfully"
-    })
+    # -----------------------------------------------------
+    # RESPONSE
+    # -----------------------------------------------------
+
+    return Response(
+        {
+            "message":
+            "Password reset email sent successfully"
+        },
+        status=status.HTTP_200_OK,
+    )
 
 @api_view(["POST"])
 def reset_password(request, uidb64, token):
@@ -1717,6 +2315,10 @@ def reset_password(request, uidb64, token):
         status=status.HTTP_200_OK,
     )
 
+# =========================
+# WORKER ONLINE STATUS
+# =========================
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def worker_online_status(request):
@@ -1725,51 +2327,220 @@ def worker_online_status(request):
     print("USER:", request.user)
     print("USER ROLE:", request.user.role)
 
+    # -----------------------------------------------------
+    # WORKER ONLY
+    # -----------------------------------------------------
+
     if request.user.role != "worker":
+
         return Response(
-            {"error": "Only workers can change status"},
+            {
+                "error":
+                "Only workers can change status"
+            },
             status=status.HTTP_403_FORBIDDEN,
         )
 
-    worker = WorkerProfile.objects.get(user=request.user)
+    # -----------------------------------------------------
+    # GET WORKER PROFILE
+    # -----------------------------------------------------
+
+    worker = get_object_or_404(
+        WorkerProfile,
+        user=request.user,
+    )
 
     print("Before:", worker.is_online)
 
-    worker.is_online = request.data.get("is_online", False)
-    worker.save()
+    # -----------------------------------------------------
+    # GET ONLINE STATUS
+    # -----------------------------------------------------
+
+    is_online = request.data.get(
+        "is_online",
+        False
+    )
+
+    # -----------------------------------------------------
+    # VALIDATE BOOLEAN VALUE
+    # -----------------------------------------------------
+
+    if isinstance(is_online, str):
+
+        is_online = is_online.lower() in [
+            "true",
+            "1",
+            "yes",
+        ]
+
+    else:
+
+        is_online = bool(is_online)
+
+    # -----------------------------------------------------
+    # UPDATE STATUS
+    # -----------------------------------------------------
+
+    worker.is_online = is_online
+
+    worker.save(
+        update_fields=["is_online"]
+    )
 
     worker.refresh_from_db()
 
     print("After:", worker.is_online)
 
-    return Response({
-        "message": "Status Updated",
-        "is_online": worker.is_online,
-    })
+    # -----------------------------------------------------
+    # RESPONSE
+    # -----------------------------------------------------
+
+    return Response(
+        {
+            "message":
+            "Status Updated",
+
+            "is_online":
+            worker.is_online,
+        },
+        status=status.HTTP_200_OK,
+    )
+
+# =========================
+# UPDATE WORKER LOCATION
+# =========================
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def update_worker_location(request):
 
+    # -----------------------------------------------------
+    # WORKER ONLY
+    # -----------------------------------------------------
+
     if request.user.role != "worker":
+
         return Response(
-            {"error": "Only workers allowed"},
-            status=403
+            {
+                "error":
+                "Only workers allowed"
+            },
+            status=status.HTTP_403_FORBIDDEN,
         )
 
-    worker = WorkerProfile.objects.get(user=request.user)
+    # -----------------------------------------------------
+    # GET WORKER PROFILE
+    # -----------------------------------------------------
 
-    worker.latitude = request.data.get("latitude")
-    worker.longitude = request.data.get("longitude")
+    worker = get_object_or_404(
+        WorkerProfile,
+        user=request.user,
+    )
 
-    from django.utils import timezone
+    # -----------------------------------------------------
+    # GET LOCATION
+    # -----------------------------------------------------
+
+    latitude = request.data.get("latitude")
+    longitude = request.data.get("longitude")
+
+    # -----------------------------------------------------
+    # VALIDATE LOCATION
+    # -----------------------------------------------------
+
+    if latitude is None or longitude is None:
+
+        return Response(
+            {
+                "error":
+                "Latitude and longitude are required."
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # -----------------------------------------------------
+    # CONVERT TO FLOAT
+    # -----------------------------------------------------
+
+    try:
+
+        latitude = float(latitude)
+        longitude = float(longitude)
+
+    except (TypeError, ValueError):
+
+        return Response(
+            {
+                "error":
+                "Latitude and longitude must be valid numbers."
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # -----------------------------------------------------
+    # VALIDATE LATITUDE RANGE
+    # -----------------------------------------------------
+
+    if not -90 <= latitude <= 90:
+
+        return Response(
+            {
+                "error":
+                "Latitude must be between -90 and 90."
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # -----------------------------------------------------
+    # VALIDATE LONGITUDE RANGE
+    # -----------------------------------------------------
+
+    if not -180 <= longitude <= 180:
+
+        return Response(
+            {
+                "error":
+                "Longitude must be between -180 and 180."
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # -----------------------------------------------------
+    # UPDATE LOCATION
+    # -----------------------------------------------------
+
+    worker.latitude = latitude
+    worker.longitude = longitude
     worker.last_location_update = timezone.now()
 
-    worker.save()
+    worker.save(
+        update_fields=[
+            "latitude",
+            "longitude",
+            "last_location_update",
+        ]
+    )
 
-    return Response({
-        "message": "Location Updated"
-    })
+    # -----------------------------------------------------
+    # RESPONSE
+    # -----------------------------------------------------
+
+    return Response(
+        {
+            "message":
+            "Location Updated",
+
+            "latitude":
+            worker.latitude,
+
+            "longitude":
+            worker.longitude,
+
+            "last_location_update":
+            worker.last_location_update,
+        },
+        status=status.HTTP_200_OK,
+    )
 
 # =========================================================
 # WORKER LOCATION API
@@ -1956,9 +2727,11 @@ def nearby_workers(request):
     # -----------------------------------------------------
 
     if request.user.role != "customer":
+
         return Response(
             {
-                "error": "Only customers can access nearby workers."
+                "error":
+                "Only customers can access nearby workers."
             },
             status=status.HTTP_403_FORBIDDEN,
         )
@@ -1968,60 +2741,130 @@ def nearby_workers(request):
     # -----------------------------------------------------
 
     try:
+
         customer_location = CustomerLocation.objects.get(
             customer=request.user
         )
 
     except CustomerLocation.DoesNotExist:
+
         return Response(
             {
-                "error": "Customer location not found."
+                "error":
+                "Customer location not found."
             },
             status=status.HTTP_404_NOT_FOUND,
         )
 
-    customer_lat = float(customer_location.latitude)
-    customer_lon = float(customer_location.longitude)
+    # -----------------------------------------------------
+    # CUSTOMER GPS
+    # -----------------------------------------------------
+
+    try:
+
+        customer_lat = float(
+            customer_location.latitude
+        )
+
+        customer_lon = float(
+            customer_location.longitude
+        )
+
+    except (TypeError, ValueError):
+
+        return Response(
+            {
+                "error":
+                "Customer location is invalid."
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # -----------------------------------------------------
+    # VALIDATE CUSTOMER GPS RANGE
+    # -----------------------------------------------------
+
+    if not -90 <= customer_lat <= 90:
+
+        return Response(
+            {
+                "error":
+                "Customer latitude is invalid."
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if not -180 <= customer_lon <= 180:
+
+        return Response(
+            {
+                "error":
+                "Customer longitude is invalid."
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     print(
         "CUSTOMER LOCATION:",
         customer_lat,
-        customer_lon
+        customer_lon,
     )
 
     # -----------------------------------------------------
-    # RADIUS
-    # Default = 20 KM
+    # SEARCH RADIUS
+    # DEFAULT = 20 KM
     # -----------------------------------------------------
 
     try:
+
         radius_km = float(
-            request.query_params.get("radius", 20)
+            request.query_params.get(
+                "radius",
+                20
+            )
         )
+
     except (TypeError, ValueError):
+
         radius_km = 20.0
 
-    print("RADIUS:", radius_km)
+    # -----------------------------------------------------
+    # VALIDATE RADIUS
+    # -----------------------------------------------------
+
+    if radius_km <= 0:
+
+        return Response(
+            {
+                "error":
+                "Radius must be greater than 0."
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    print(
+        "RADIUS:",
+        radius_km
+    )
 
     # -----------------------------------------------------
-    # GET ONLINE WORKERS
+    # GET ONLINE / AVAILABLE / VERIFIED WORKERS
     # -----------------------------------------------------
 
     workers = (
         WorkerProfile.objects
-        .filter(is_online=True)
+        .filter(
+            is_online=True,
+            is_available=True,
+            is_verified=True,
+        )
         .select_related("user")
         .prefetch_related("services")
     )
 
     print(
-        "ONLINE WORKERS:",
-        list(
-            workers.values(
-                "id",
-                "is_online"
-            )
-        )
+        "ONLINE AVAILABLE VERIFIED WORKERS:",
+        workers.count()
     )
 
     nearby = []
@@ -2036,15 +2879,14 @@ def nearby_workers(request):
             "CHECKING WORKER:",
             worker.id,
             worker.user.username,
-            "ONLINE:",
-            worker.is_online
         )
 
         # -------------------------------------------------
-        # WORKER LOCATION
+        # GET WORKER LOCATION
         # -------------------------------------------------
 
         try:
+
             worker_location = WorkerLocation.objects.get(
                 worker=worker
             )
@@ -2058,31 +2900,77 @@ def nearby_workers(request):
 
             continue
 
-        worker_lat = float(
-            worker_location.latitude
-        )
+        # -------------------------------------------------
+        # WORKER GPS
+        # -------------------------------------------------
 
-        worker_lon = float(
-            worker_location.longitude
-        )
+        try:
+
+            worker_lat = float(
+                worker_location.latitude
+            )
+
+            worker_lon = float(
+                worker_location.longitude
+            )
+
+        except (TypeError, ValueError):
+
+            print(
+                "INVALID WORKER GPS:",
+                worker.id
+            )
+
+            continue
+
+        # -------------------------------------------------
+        # VALIDATE WORKER GPS RANGE
+        # -------------------------------------------------
+
+        if not -90 <= worker_lat <= 90:
+
+            print(
+                "INVALID WORKER LATITUDE:",
+                worker.id
+            )
+
+            continue
+
+        if not -180 <= worker_lon <= 180:
+
+            print(
+                "INVALID WORKER LONGITUDE:",
+                worker.id
+            )
+
+            continue
 
         print(
             "WORKER LOCATION:",
             worker.id,
             worker_lat,
             worker_lon,
-            worker_location.updated_at
         )
 
         # -------------------------------------------------
         # HAVERSINE DISTANCE
         # -------------------------------------------------
 
-        lat1 = radians(customer_lat)
-        lon1 = radians(customer_lon)
+        lat1 = radians(
+            customer_lat
+        )
 
-        lat2 = radians(worker_lat)
-        lon2 = radians(worker_lon)
+        lon1 = radians(
+            customer_lon
+        )
+
+        lat2 = radians(
+            worker_lat
+        )
+
+        lon2 = radians(
+            worker_lon
+        )
 
         dlat = lat2 - lat1
         dlon = lon2 - lon1
@@ -2099,14 +2987,14 @@ def nearby_workers(request):
             sqrt(1 - a)
         )
 
-        distance_km = 6371 * c
+        distance_km = 6371.0 * c
 
         print(
             "WORKER:",
             worker.id,
             "DISTANCE:",
             distance_km,
-            "KM"
+            "KM",
         )
 
         # -------------------------------------------------
@@ -2137,8 +3025,11 @@ def nearby_workers(request):
 
             services.append(
                 {
-                    "id": service.id,
-                    "name": service.name,
+                    "id":
+                        service.id,
+
+                    "name":
+                        service.name,
                 }
             )
 
@@ -2148,17 +3039,23 @@ def nearby_workers(request):
 
         nearby.append(
             {
-                "id": worker.id,
+                "id":
+                    worker.id,
 
-                "worker_id": worker.id,
+                "worker_id":
+                    worker.id,
 
-                "worker": worker.user.username,
+                "worker":
+                    worker.user.username,
 
-                "user": {
-                    "name": worker.user.username,
-                },
+                "user":
+                    {
+                        "name":
+                            worker.user.username,
+                    },
 
-                "city": worker.city,
+                "city":
+                    worker.city,
 
                 "experience_years":
                     worker.experience_years,
@@ -2176,13 +3073,20 @@ def nearby_workers(request):
                     worker.is_verified,
 
                 "distance_km":
-                    round(distance_km, 2),
+                    round(
+                        distance_km,
+                        2,
+                    ),
 
                 "latitude":
-                    str(worker_location.latitude),
+                    str(
+                        worker_location.latitude
+                    ),
 
                 "longitude":
-                    str(worker_location.longitude),
+                    str(
+                        worker_location.longitude
+                    ),
 
                 "accuracy":
                     worker_location.accuracy,
@@ -2351,7 +3255,7 @@ def worker_verification_status(request):
                 "is_verified": worker.is_verified,
                 "message": "Verification documents have not been submitted yet.",
             },
-            status=200,
+            status=status.HTTP_200_OK,
         )
 
     # =====================================================
@@ -2370,5 +3274,5 @@ def worker_verification_status(request):
             "reviewed_at": verification.reviewed_at,
             "created_at": verification.created_at,
         },
-        status=200,
+        status=status.HTTP_200_OK,
     )
