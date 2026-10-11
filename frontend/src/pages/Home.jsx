@@ -28,14 +28,28 @@ function Home() {
   const [availableOnly, setAvailableOnly] = useState(false);
   const [minimumRating, setMinimumRating] = useState("");
   const [sortBy, setSortBy] = useState("");
-const loadServices = async () => {
-  const response = await api.get("/services/");
 
-  console.log(response);
-  if (response.ok) {
-    setServices(response.data);
+const loadServices = async () => {
+  try {
+    const response = await api.get("/services/");
+
+    console.log("SERVICES API STATUS:", response.status);
+    console.log("SERVICES API DATA:", response.data);
+
+    if (response.status >= 200 && response.status < 300) {
+      const data = response.data;
+      setServices(Array.isArray(data) ? data : []);
+    }
+  } catch (error) {
+    console.error(
+      "SERVICES API ERROR:",
+      error.response?.status,
+      error.response?.data || error.message
+    );
   }
 };
+
+
 
 const loadWorkers = async () => {
   try {
@@ -43,19 +57,32 @@ const loadWorkers = async () => {
       "/customer/nearby-workers/?radius=50"
     );
 
-    console.log("NEARBY WORKERS API RESPONSE:", response);
+    console.log("NEARBY WORKERS API STATUS:", response.status);
+    console.log("NEARBY WORKERS API RESPONSE:", response.data);
 
-    if (response.ok) {
-      console.log("LIVE NEARBY WORKERS:", response.data);
+    if (response.status >= 200 && response.status < 300) {
+      const workerList = response.data?.workers;
 
-      setWorkers(response.data.workers || []);
-    } else {
-      console.log("NEARBY WORKERS API FAILED");
+      if (Array.isArray(workerList)) {
+        setWorkers(workerList);
+        console.log("LIVE NEARBY WORKERS COUNT:", workerList.length);
+      } else {
+        console.error(
+          "INVALID NEARBY WORKERS RESPONSE:",
+          response.data
+        );
+        setWorkers([]);
+      }
     }
   } catch (error) {
-    console.error("NEARBY WORKERS ERROR:", error);
+    console.error(
+      "NEARBY WORKERS API ERROR:",
+      error.response?.status,
+      error.response?.data || error.message
+    );
   }
 };
+
 
 useEffect(() => {
   loadServices();

@@ -1,5 +1,6 @@
 from django.db.models import Avg
 from django.shortcuts import get_object_or_404
+from datetime import timedelta
 from django.conf import settings
 from django.core.mail import send_mail
 from django.contrib.auth import get_user_model
@@ -238,6 +239,7 @@ class WorkerProfileViewSet(viewsets.ModelViewSet):
 
         return queryset
     
+
 # =====================================================
 # NEARBY WORKERS API
 # =====================================================
@@ -246,36 +248,25 @@ class WorkerProfileViewSet(viewsets.ModelViewSet):
 @permission_classes([IsAuthenticated])
 def nearby_workers(request):
 
-    print("🔥🔥🔥 NEARBY WORKERS FUNCTION CALLED 🔥🔥🔥")
+    print("NEARBY WORKERS FUNCTION CALLED")
+    print("DEBUG: FUNCTION STARTED")
+    print("DEBUG: USER ROLE =", request.user.role)
 
-    # -----------------------------------------------------
     # CUSTOMER ONLY
-    # -----------------------------------------------------
-
     if request.user.role != "customer":
         return Response(
-            {
-                "error": "Only customers can find nearby workers."
-            },
+            {"error": "Only customers can find nearby workers."},
             status=status.HTTP_403_FORBIDDEN,
         )
 
-    # -----------------------------------------------------
     # GET CUSTOMER LOCATION
-    # -----------------------------------------------------
-
     try:
         customer_location = CustomerLocation.objects.get(
             customer=request.user
         )
 
-        customer_latitude = float(
-            customer_location.latitude
-        )
-
-        customer_longitude = float(
-            customer_location.longitude
-        )
+        customer_latitude = float(customer_location.latitude)
+        customer_longitude = float(customer_location.longitude)
 
     except CustomerLocation.DoesNotExist:
         return Response(
@@ -290,56 +281,36 @@ def nearby_workers(request):
 
     except (TypeError, ValueError):
         return Response(
-            {
-                "error": "Customer GPS location is invalid."
-            },
+            {"error": "Customer GPS location is invalid."},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    # -----------------------------------------------------
     # VALIDATE CUSTOMER GPS
-    # -----------------------------------------------------
-
     if not (
         -90 <= customer_latitude <= 90
         and -180 <= customer_longitude <= 180
     ):
         return Response(
-            {
-                "error": "Customer GPS coordinates are invalid."
-            },
+            {"error": "Customer GPS coordinates are invalid."},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    # -----------------------------------------------------
-    # SEARCH RADIUS
-    # Default = 5 KM
-    # -----------------------------------------------------
-
+    # SEARCH RADIUS (DEFAULT 5 KM)
     try:
-        radius_km = float(
-            request.query_params.get("radius", 5)
-        )
+        radius_km = float(request.query_params.get("radius", 5))
     except (TypeError, ValueError):
         return Response(
-            {
-                "error": "Radius must be a valid number."
-            },
+            {"error": "Radius must be a valid number."},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    if radius_km <= 0:
+    if not 0 < radius_km <= 100:
         return Response(
-            {
-                "error": "Radius must be greater than 0."
-            },
+            {"error": "Radius must be greater than 0 and at most 100 KM."},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    # -----------------------------------------------------
-    # GET ONLINE + AVAILABLE + VERIFIED WORKERS
-    # -----------------------------------------------------
-
+    # GET ONLINE, AVAILABLE AND VERIFIED WORKERS
     workers = (
         WorkerProfile.objects
         .filter(
@@ -351,269 +322,126 @@ def nearby_workers(request):
         .prefetch_related("services")
     )
 
-    print("=================================")
-    print(
-        "ELIGIBLE WORKERS:",
-        workers.count()
-    )
-    print(
-        "CUSTOMER LOCATION:",
-        customer_latitude,
-        customer_longitude
-    )
-    print(
-        "SEARCH RADIUS:",
-        radius_km,
-        "KM"
-    )
-    print("=================================")
+    print("ELIGIBLE WORKERS:", workers.count())
+    print("CUSTOMER LOCATION:", customer_latitude, customer_longitude)
+    print("SEARCH RADIUS:", radius_km, "KM")
 
     nearby = []
+    stale_cutoff = timezone.now() - timedelta(seconds=180)
 
-    # -----------------------------------------------------
     # CHECK EACH WORKER
-    # -----------------------------------------------------
-
     for worker in workers:
 
-        print(
-            "CHECKING WORKER:",
-            worker.user.username
-        )
+        print("CHECKING WORKER:", worker.user.username)
 
-        # -------------------------------------------------
-        # GET LIVE WORKER LOCATION
-        # -------------------------------------------------
-
+        # GET WORKER LOCATION
         try:
             worker_location = WorkerLocation.objects.get(
                 worker=worker
             )
-
-            worker_latitude = float(
-                worker_location.latitude
-            )
-
-            worker_longitude = float(
-                worker_location.longitude
-            )
-
         except WorkerLocation.DoesNotExist:
-
-            print(
-                "NO LIVE LOCATION:",
-                worker.user.username
-            )
-
+            print("NO LIVE LOCATION:", worker.user.username)
             continue
 
+        # CHECK GPS TIMESTAMP
+        if worker_location.updated_at is None:
+            print("MISSING LOCATION TIMESTAMP:", worker.user.username)
+            continue
+
+        if worker_location.updated_at < stale_cutoff:
+            print("STALE WORKER LOCATION:", worker.user.username)
+            continue
+
+        # CONVERT WORKER GPS
+        try:
+            worker_latitude = float(worker_location.latitude)
+            worker_longitude = float(worker_location.longitude)
         except (TypeError, ValueError):
-
-            print(
-                "INVALID WORKER GPS:",
-                worker.user.username
-            )
-
+            print("INVALID WORKER GPS:", worker.user.username)
             continue
 
-        # -------------------------------------------------
         # VALIDATE WORKER GPS
-        # -------------------------------------------------
-
         if not (
             -90 <= worker_latitude <= 90
             and -180 <= worker_longitude <= 180
         ):
-
-            print(
-                "WORKER GPS OUT OF RANGE:",
-                worker.user.username
-            )
-
+            print("WORKER GPS OUT OF RANGE:", worker.user.username)
             continue
 
-        # -------------------------------------------------
         # HAVERSINE DISTANCE
-        # -------------------------------------------------
-
-        earth_radius_km = 6371.0
-
-        lat1 = radians(
-            customer_latitude
-        )
-
-        lat2 = radians(
-            worker_latitude
-        )
-
-        delta_lat = radians(
-            worker_latitude
-            - customer_latitude
-        )
-
-        delta_lon = radians(
-            worker_longitude
-            - customer_longitude
-        )
+        lat1 = radians(customer_latitude)
+        lat2 = radians(worker_latitude)
+        delta_lat = radians(worker_latitude - customer_latitude)
+        delta_lon = radians(worker_longitude - customer_longitude)
 
         a = (
             sin(delta_lat / 2) ** 2
-            +
-            cos(lat1)
-            * cos(lat2)
-            * sin(delta_lon / 2) ** 2
+            + cos(lat1) * cos(lat2) * sin(delta_lon / 2) ** 2
         )
 
-        c = 2 * atan2(
-            sqrt(a),
-            sqrt(1 - a)
-        )
-
-        distance_km = (
-            earth_radius_km * c
-        )
+        # Guard against tiny floating-point rounding errors
+        a = max(0.0, min(1.0, a))
+        distance_km = 6371.0 * 2 * atan2(sqrt(a), sqrt(1 - a))
 
         print(
             "WORKER DISTANCE:",
             worker.user.username,
             round(distance_km, 2),
-            "KM"
+            "KM",
         )
 
-        # -------------------------------------------------
-        # RADIUS FILTER
-        # -------------------------------------------------
-
+        # FILTER BY RADIUS
         if distance_km > radius_km:
-
-            print(
-                "WORKER OUTSIDE RADIUS:",
-                worker.user.username
-            )
-
+            print("WORKER OUTSIDE RADIUS:", worker.user.username)
             continue
 
-        # -------------------------------------------------
-        # SERVICES
-        # -------------------------------------------------
+        # WORKER SERVICES
+        services = [
+            {"id": service.id, "name": service.name}
+            for service in worker.services.all()
+        ]
 
-        services = []
-
-        for service in worker.services.all():
-
-            services.append(
-                {
-                    "id": service.id,
-                    "name": service.name,
-                }
-            )
-
-        # -------------------------------------------------
-        # ADD WORKER
-        # -------------------------------------------------
-
+        # ADD WORKER TO RESULTS
         nearby.append(
             {
                 "id": worker.id,
-
                 "worker_id": worker.id,
-
                 "worker": worker.user.username,
-
                 "name": worker.user.username,
-
-                "user": {
-                    "name": worker.user.username,
-                },
-
+                "user": {"name": worker.user.username},
                 "phone": worker.user.phone,
-
                 "city": worker.city,
-
-                "experience_years":
-                    worker.experience_years,
-
-                "rating":
-                    worker.rating,
-
-                "is_online":
-                    worker.is_online,
-
-                "is_available":
-                    worker.is_available,
-
-                "is_verified":
-                    worker.is_verified,
-
-                "latitude":
-                    worker_location.latitude,
-
-                "longitude":
-                    worker_location.longitude,
-
-                "accuracy":
-                    worker_location.accuracy,
-
-                "speed":
-                    worker_location.speed,
-
-                "heading":
-                    worker_location.heading,
-
-                "updated_at":
-                    worker_location.updated_at,
-
-                "distance_km":
-                    round(
-                        distance_km,
-                        2
-                    ),
-
-                "services":
-                    services,
+                "experience_years": worker.experience_years,
+                "rating": worker.rating,
+                "is_online": worker.is_online,
+                "is_available": worker.is_available,
+                "is_verified": worker.is_verified,
+                "latitude": str(worker_location.latitude),
+                "longitude": str(worker_location.longitude),
+                "accuracy": worker_location.accuracy,
+                "speed": worker_location.speed,
+                "heading": worker_location.heading,
+                "updated_at": worker_location.updated_at,
+                "distance_km": round(distance_km, 2),
+                "services": services,
             }
         )
 
-    # -----------------------------------------------------
-    # SORT BY DISTANCE
-    # -----------------------------------------------------
+    # NEAREST WORKERS FIRST
+    nearby.sort(key=lambda item: item["distance_km"])
 
-    nearby.sort(
-        key=lambda worker:
-        worker["distance_km"]
-    )
-
-    # -----------------------------------------------------
-    # FINAL DEBUG
-    # -----------------------------------------------------
-
-    print(
-        "FINAL NEARBY WORKERS:",
-        len(nearby)
-    )
-
-    print("=================================")
-
-    # -----------------------------------------------------
-    # RESPONSE
-    # -----------------------------------------------------
+    print("FINAL NEARBY WORKERS:", len(nearby))
 
     return Response(
         {
-            "customer":
-                request.user.username,
-
-            "radius_km":
-                radius_km,
-
-            "count":
-                len(nearby),
-
-            "workers":
-                nearby,
+            "customer": request.user.username,
+            "radius_km": radius_km,
+            "count": len(nearby),
+            "workers": nearby,
         },
         status=status.HTTP_200_OK,
     )
+
 
 # =========================
 # BOOKING API
@@ -2406,6 +2234,7 @@ def worker_online_status(request):
         status=status.HTTP_200_OK,
     )
 
+
 # =========================
 # UPDATE WORKER LOCATION
 # =========================
@@ -2414,101 +2243,53 @@ def worker_online_status(request):
 @permission_classes([IsAuthenticated])
 def update_worker_location(request):
 
-    # -----------------------------------------------------
     # WORKER ONLY
-    # -----------------------------------------------------
-
     if request.user.role != "worker":
-
         return Response(
-            {
-                "error":
-                "Only workers allowed"
-            },
+            {"error": "Only workers allowed"},
             status=status.HTTP_403_FORBIDDEN,
         )
 
-    # -----------------------------------------------------
     # GET WORKER PROFILE
-    # -----------------------------------------------------
-
     worker = get_object_or_404(
         WorkerProfile,
         user=request.user,
     )
 
-    # -----------------------------------------------------
     # GET LOCATION
-    # -----------------------------------------------------
-
     latitude = request.data.get("latitude")
     longitude = request.data.get("longitude")
 
-    # -----------------------------------------------------
-    # VALIDATE LOCATION
-    # -----------------------------------------------------
-
     if latitude is None or longitude is None:
-
         return Response(
-            {
-                "error":
-                "Latitude and longitude are required."
-            },
+            {"error": "Latitude and longitude are required."},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    # -----------------------------------------------------
-    # CONVERT TO FLOAT
-    # -----------------------------------------------------
-
+    # CONVERT COORDINATES
     try:
-
         latitude = float(latitude)
         longitude = float(longitude)
-
     except (TypeError, ValueError):
-
         return Response(
-            {
-                "error":
-                "Latitude and longitude must be valid numbers."
-            },
+            {"error": "Latitude and longitude must be valid numbers."},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    # -----------------------------------------------------
-    # VALIDATE LATITUDE RANGE
-    # -----------------------------------------------------
-
+    # VALIDATE COORDINATES
     if not -90 <= latitude <= 90:
-
         return Response(
-            {
-                "error":
-                "Latitude must be between -90 and 90."
-            },
+            {"error": "Latitude must be between -90 and 90."},
             status=status.HTTP_400_BAD_REQUEST,
         )
-
-    # -----------------------------------------------------
-    # VALIDATE LONGITUDE RANGE
-    # -----------------------------------------------------
 
     if not -180 <= longitude <= 180:
-
         return Response(
-            {
-                "error":
-                "Longitude must be between -180 and 180."
-            },
+            {"error": "Longitude must be between -180 and 180."},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    # -----------------------------------------------------
-    # UPDATE LOCATION
-    # -----------------------------------------------------
-
+    # UPDATE WORKER PROFILE LOCATION
     worker.latitude = latitude
     worker.longitude = longitude
     worker.last_location_update = timezone.now()
@@ -2521,26 +2302,37 @@ def update_worker_location(request):
         ]
     )
 
-    # -----------------------------------------------------
-    # RESPONSE
-    # -----------------------------------------------------
+    # UPDATE LIVE WORKER LOCATION
+    location, created = WorkerLocation.objects.get_or_create(
+        worker=worker,
+        defaults={
+            "latitude": latitude,
+            "longitude": longitude,
+        },
+    )
 
+    if not created:
+        location.latitude = latitude
+        location.longitude = longitude
+        location.save(
+            update_fields=[
+                "latitude",
+                "longitude",
+                "updated_at",
+            ]
+        )
+
+    # RESPONSE
     return Response(
         {
-            "message":
-            "Location Updated",
-
-            "latitude":
-            worker.latitude,
-
-            "longitude":
-            worker.longitude,
-
-            "last_location_update":
-            worker.last_location_update,
+            "message": "Worker location updated successfully.",
+            "latitude": latitude,
+            "longitude": longitude,
+            "last_location_update": worker.last_location_update,
         },
         status=status.HTTP_200_OK,
     )
+
 
 # =========================================================
 # WORKER LOCATION API
@@ -2718,7 +2510,7 @@ def customer_location(request):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def nearby_workers(request):
+def nearby_workers_legacy(request):
 
     print("🔥 NEARBY WORKERS API CALLED 🔥")
 
