@@ -674,20 +674,18 @@ function WorkerDashboard() {
 
                 <div className="mt-4">
 
-                  <button
-                    onClick={
-                      toggleOnlineStatus
-                    }
-                    className={`px-6 py-3 rounded-2xl font-bold text-white shadow-lg transition ${
-                      isOnline
-                        ? "bg-red-600 hover:bg-red-700"
-                        : "bg-green-600 hover:bg-green-700"
-                    }`}
-                  >
-                    {isOnline
-                      ? "🔴 Go Offline"
-                      : "🟢 Go Online"}
-                  </button>
+                  
+<button
+  onClick={toggleOnlineStatus}
+  className={`px-6 py-3 rounded-2xl font-bold text-white shadow-lg transition ${
+    isOnline
+      ? "bg-green-600 hover:bg-green-700"
+      : "bg-red-600 hover:bg-red-700"
+  }`}
+>
+  {isOnline ? "🟢 Online" : "🔴 Offline"}
+</button>
+
 
                 </div>
 

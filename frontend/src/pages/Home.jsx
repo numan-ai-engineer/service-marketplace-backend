@@ -52,37 +52,52 @@ const loadServices = async () => {
 
 
 const loadWorkers = async () => {
+  const storedUser = localStorage.getItem("user");
+  const token = localStorage.getItem("access");
+
+  if (!token || !storedUser) {
+    setWorkers([]);
+    return;
+  }
+
   try {
+    const user = JSON.parse(storedUser);
+
+    // Nearby workers are only for customers.
+    if (user.role !== "customer") {
+      setWorkers([]);
+      return;
+    }
+
     const response = await api.get(
       "/customer/nearby-workers/?radius=50"
     );
 
-    console.log("NEARBY WORKERS API STATUS:", response.status);
-    console.log("NEARBY WORKERS API RESPONSE:", response.data);
+    console.log(
+      "NEARBY WORKERS API STATUS:",
+      response.status
+    );
 
-    if (response.status >= 200 && response.status < 300) {
-      const workerList = response.data?.workers;
+    console.log(
+      "NEARBY WORKERS API RESPONSE:",
+      response.data
+    );
 
-      if (Array.isArray(workerList)) {
-        setWorkers(workerList);
-        console.log("LIVE NEARBY WORKERS COUNT:", workerList.length);
-      } else {
-        console.error(
-          "INVALID NEARBY WORKERS RESPONSE:",
-          response.data
-        );
-        setWorkers([]);
-      }
+    if (response.ok) {
+      setWorkers(response.data.workers || []);
+    } else {
+      console.error(
+        "NEARBY WORKERS API FAILED:",
+        response.data
+      );
     }
   } catch (error) {
     console.error(
-      "NEARBY WORKERS API ERROR:",
-      error.response?.status,
-      error.response?.data || error.message
+      "NEARBY WORKERS ERROR:",
+      error.response?.data || error
     );
   }
 };
-
 
 useEffect(() => {
   loadServices();

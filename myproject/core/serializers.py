@@ -160,9 +160,12 @@ class BookingSerializer(serializers.ModelSerializer):
         data["booking_date"] = instance.created_at
         
         return data
+
+
 # =========================
 # REVIEW SERIALIZER
 # =========================
+
 class ReviewSerializer(serializers.ModelSerializer):
     customer_name = serializers.CharField(
         source="customer.username",
@@ -183,10 +186,14 @@ class ReviewSerializer(serializers.ModelSerializer):
         ]
 
         read_only_fields = [
+            "id",
             "customer",
+            "customer_name",
             "worker",
+            "booking",
             "created_at",
         ]
+
 
 # VERIFICATION SERIALIZER
 

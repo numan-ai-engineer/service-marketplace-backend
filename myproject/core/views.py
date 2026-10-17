@@ -251,6 +251,8 @@ def nearby_workers(request):
     print("NEARBY WORKERS FUNCTION CALLED")
     print("DEBUG: FUNCTION STARTED")
     print("DEBUG: USER ROLE =", request.user.role)
+    print("DEBUG: USERNAME =", request.user.username)
+    print("DEBUG: IS AUTHENTICATED =", request.user.is_authenticated)
 
     # CUSTOMER ONLY
     if request.user.role != "customer":
@@ -346,11 +348,25 @@ def nearby_workers(request):
         # CHECK GPS TIMESTAMP
         if worker_location.updated_at is None:
             print("MISSING LOCATION TIMESTAMP:", worker.user.username)
-            continue
+            continue     
+        
+        
+        print(
+            "WORKER LOCATION DEBUG:",
+            worker.user.username,
+            "GPS:",
+            worker_location.latitude,
+            worker_location.longitude,
+            "UPDATED AT:",
+            worker_location.updated_at,
+            "STALE CUTOFF:",
+            stale_cutoff,
+        )
 
         if worker_location.updated_at < stale_cutoff:
             print("STALE WORKER LOCATION:", worker.user.username)
             continue
+
 
         # CONVERT WORKER GPS
         try:
@@ -441,6 +457,102 @@ def nearby_workers(request):
         },
         status=status.HTTP_200_OK,
     )
+
+    
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def customer_map_workers(request):
+    from math import radians, sin, cos, sqrt, atan2
+
+    if request.user.role != "customer":
+        return Response(
+            {"error": "Only customers can access worker map."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    try:
+        customer_location = CustomerLocation.objects.get(
+            customer=request.user
+        )
+        customer_lat = float(customer_location.latitude)
+        customer_lon = float(customer_location.longitude)
+        radius_km = float(request.query_params.get("radius", 50))
+
+        if (
+            not -90 <= customer_lat <= 90
+            or not -180 <= customer_lon <= 180
+            or radius_km <= 0
+        ):
+            raise ValueError("Invalid coordinates or radius")
+
+    except CustomerLocation.DoesNotExist:
+        return Response(
+            {"error": "Customer location not found."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+    except (TypeError, ValueError):
+        return Response(
+            {"error": "Invalid customer coordinates or radius."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    workers = WorkerProfile.objects.filter(
+        is_verified=True,
+        is_available=True,
+    ).select_related("user")
+
+    results = []
+
+    for worker in workers:
+        try:
+            location = worker.location
+            lat = float(location.latitude)
+            lon = float(location.longitude)
+
+            if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+                continue
+
+        except (WorkerLocation.DoesNotExist, TypeError, ValueError):
+            continue
+
+        lat1, lon1 = radians(customer_lat), radians(customer_lon)
+        lat2, lon2 = radians(lat), radians(lon)
+
+        dlat = lat2 - lat1
+        dlon = lon2 - lon1
+
+        a = (
+            sin(dlat / 2) ** 2
+            + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
+        )
+        a = max(0.0, min(1.0, a))
+        distance_km = 6371 * 2 * atan2(sqrt(a), sqrt(1 - a))
+
+        if distance_km > radius_km:
+            continue
+
+        results.append({
+            "id": worker.id,
+            "worker_id": worker.id,
+            "worker": worker.user.username,
+            "city": worker.city,
+            "latitude": str(location.latitude),
+            "longitude": str(location.longitude),
+            "distance_km": round(distance_km, 2),
+            "is_online": worker.is_online,
+            "is_available": worker.is_available,
+            "is_verified": worker.is_verified,
+            "updated_at": location.updated_at,
+        })
+
+    results.sort(key=lambda item: item["distance_km"])
+
+    return Response({
+        "customer": request.user.username,
+        "radius_km": radius_km,
+        "count": len(results),
+        "workers": results,
+    })
 
 
 # =========================
@@ -2184,10 +2296,23 @@ def worker_online_status(request):
     # GET ONLINE STATUS
     # -----------------------------------------------------
 
-    is_online = request.data.get(
-        "is_online",
-        False
-    )
+    
+    # GET AND VALIDATE ONLINE STATUS
+
+    if "is_online" not in request.data:
+        return Response(
+            {"error": "is_online field is required."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    is_online = request.data["is_online"]
+
+    if not isinstance(is_online, bool):
+        return Response(
+            {"error": "is_online must be true or false."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
 
     # -----------------------------------------------------
     # VALIDATE BOOLEAN VALUE
@@ -2255,6 +2380,18 @@ def update_worker_location(request):
         WorkerProfile,
         user=request.user,
     )
+
+    
+    # PREVENT OFFLINE WORKERS FROM SENDING LOCATION
+
+    if not worker.is_online:
+        return Response(
+            {
+                "error": "You must be online to update your location."
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
 
     # GET LOCATION
     latitude = request.data.get("latitude")

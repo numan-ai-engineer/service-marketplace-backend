@@ -28,6 +28,7 @@ from .views import (
     worker_location,
     customer_location,
     nearby_workers,
+    customer_map_workers,
     customer_bookings,
     worker_bookings,
 )
@@ -180,6 +181,12 @@ urlpatterns = [
         "customer/nearby-workers/",
         nearby_workers
     ),
+
+    path(
+    "customer/map-workers/",
+    customer_map_workers,
+    name="customer-map-workers",
+),
 
     # Booking History
     path(

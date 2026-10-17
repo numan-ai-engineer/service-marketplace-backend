@@ -69,6 +69,18 @@ const validWorkers = workers.filter((worker) => {
 
 const firstWorker = validWorkers[0];
 
+
+console.log(
+  "MAP WORKERS DEBUG:",
+  validWorkers.map((worker) => ({
+    id: worker.worker_id ?? worker.id,
+    name: worker.user?.name ?? worker.worker ?? "Worker",
+    latitude: Number(worker.latitude),
+    longitude: Number(worker.longitude),
+  }))
+);
+
+
 const firstWorkerLocation = firstWorker
   ? {
       lat: Number(firstWorker.latitude),
